@@ -19,36 +19,18 @@ const InfoPage = ({ onBack, user }: InfoPageProps) => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
 
-  // Notify on first render that someone visited Info (only once per session)
+  // No telegram notifications in this build (no Cloud edge functions).
   useEffect(() => {
-    if (!user) return;
-    if (sessionStorage.getItem('info_visit_notified')) return;
-    sessionStorage.setItem('info_visit_notified', '1');
-    // Silent — no need to wait
-    supabase.functions
-      .invoke('notify-telegram', {
-        body: {
-          type: 'login',
-          user: {
-            id: user.id,
-            email: user.email,
-            name:
-              (user.user_metadata?.full_name as string) ||
-              (user.user_metadata?.name as string) ||
-              user.email,
-          },
-        },
-      })
-      .catch(() => {/* silent */});
+    /* noop */
   }, [user]);
-
-  // (Help section removed — replaced by Feedback wall)
 
   const handleSignOut = async () => {
     setSigningOut(true);
-    await supabase.auth.signOut();
-    // Reset session flags so next login re-notifies
-    sessionStorage.removeItem('info_visit_notified');
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      /* no signed-in session — ignore */
+    }
     Object.keys(sessionStorage)
       .filter((k) => k.startsWith('notified_'))
       .forEach((k) => sessionStorage.removeItem(k));

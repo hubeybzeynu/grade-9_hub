@@ -22,22 +22,18 @@ const RatingForm = ({ user }: RatingFormProps) => {
       setError('Please pick a star rating');
       return;
     }
-    if (!user) {
-      setError('You must be signed in to submit a rating.');
-      return;
-    }
     setSending(true);
 
     const userName =
-      (user.user_metadata?.full_name as string | undefined) ||
-      (user.user_metadata?.name as string | undefined) ||
-      user.email ||
+      (user?.user_metadata?.full_name as string | undefined) ||
+      (user?.user_metadata?.name as string | undefined) ||
+      user?.email ||
       'Anonymous';
 
-    // Save to DB
+    // Save to DB (works for guests too — no auth required in this build).
     const { error: dbErr } = await supabase.from('ratings').insert({
-      user_id: user.id,
-      user_email: user.email ?? null,
+      user_id: user?.id ?? null,
+      user_email: user?.email ?? null,
       user_name: userName,
       rating,
       message: message.trim() || null,
@@ -47,24 +43,6 @@ const RatingForm = ({ user }: RatingFormProps) => {
       setError(dbErr.message);
       setSending(false);
       return;
-    }
-
-    // Notify Telegram
-    try {
-      await supabase.functions.invoke('notify-telegram', {
-        body: {
-          type: 'rating',
-          rating,
-          message: message.trim() || undefined,
-          user: {
-            id: user.id,
-            email: user.email,
-            name: userName,
-          },
-        },
-      });
-    } catch {
-      /* non-blocking — DB insert already succeeded */
     }
 
     setSent(true);
