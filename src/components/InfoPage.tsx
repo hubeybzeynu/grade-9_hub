@@ -42,7 +42,8 @@ const InfoPage = ({ onBack, user }: InfoPageProps) => {
     { key: 'feedback', label: 'Feedback & Users', icon: MessageSquare, color: 'bg-emerald-500' },
     { key: 'rate', label: 'Rate this App', icon: Star, color: 'bg-amber-500' },
     { key: 'contact', label: 'Contact', icon: UserIcon, color: 'bg-rose-500' },
-    { key: 'account', label: 'Account', icon: LogOut, color: 'bg-slate-500' },
+    // Account/sign-out hidden in this build — there is no Lovable Cloud login.
+    ...(user ? [{ key: 'account', label: 'Account', icon: LogOut, color: 'bg-slate-500' }] : []),
   ];
 
   if (activeSection) {
