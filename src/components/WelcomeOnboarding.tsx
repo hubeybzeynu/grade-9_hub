@@ -498,6 +498,21 @@ const WelcomeOnboarding = ({ onComplete }: WelcomeOnboardingProps) => {
               </ol>
             </div>
 
+            <div className="flex gap-2 mb-2">
+              <button
+                onClick={() => setAutoPlay((p) => !p)}
+                className="flex-1 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium flex items-center justify-center gap-2 active:scale-95 transition-transform"
+              >
+                {autoPlay ? (
+                  <><Pause className="w-4 h-4" /> Pause demo</>
+                ) : currentStep === 0 ? (
+                  <><Play className="w-4 h-4" /> Start auto demo</>
+                ) : (
+                  <><Play className="w-4 h-4" /> Resume demo</>
+                )}
+              </button>
+            </div>
+
             <div className="flex gap-2">
               {!isLastStep && (
                 <button
