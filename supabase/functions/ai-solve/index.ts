@@ -1,4 +1,4 @@
-// Edge function: AI math / chemistry / periodic-table solver.
+// Edge function: AI math / physics / chemistry / trigonometry tutor.
 // Calls Lovable AI Gateway and returns a structured JSON answer.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -8,20 +8,26 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `You are a Grade 9 STEM tutor. The user will ask math, physics, or chemistry questions.
-Respond with a single JSON object (no markdown, no code fences) with this shape:
+const SYSTEM_PROMPT = `You are a Grade 9 STEM tutor. The user will ask math, physics, chemistry, or trigonometry questions.
+Respond with a SINGLE JSON object (no markdown, no code fences) of this shape:
 {
   "answer": "short plain-text final answer",
   "steps": ["step 1", "step 2", "..."],
-  "plot": null | { "type": "quadratic", "a": number, "b": number, "c": number, "roots": [number, number] | [] }
-                | { "type": "function", "expr": "mathjs expression in x", "xmin": number, "xmax": number }
+  "plot": null
+        | { "type": "quadratic", "a": number, "b": number, "c": number, "roots": number[] }
+        | { "type": "function", "expr": "math.js expression in x", "xmin": number, "xmax": number }
+        | { "type": "triangle", "angleA": number, "opposite"?: string, "adjacent"?: string, "hypotenuse"?: string, "caption"?: string }
 }
 Rules:
-- If the question is a quadratic equation (ax^2+bx+c=0 or y=ax^2+bx+c), include plot of type "quadratic".
-- If the user asks to graph/plot f(x)=..., include plot of type "function" with a valid math.js expression using variable x.
-- Otherwise set plot to null.
-- Keep steps concise. Use plain unicode (no LaTeX).
-- Output JSON only.`;
+- For quadratic equations or y = ax^2+bx+c, include plot.type = "quadratic" with numeric a,b,c and roots.
+- For "graph", "plot", or "draw f(x)=…", include plot.type = "function" using a math.js expression in x.
+- For trigonometry questions involving a right-angled triangle (sin/cos/tan, finding a side/angle, SOH-CAH-TOA), ALWAYS:
+  * Show the answer with units.
+  * In "steps", explicitly write SOH-CAH-TOA, identify opposite/adjacent/hypotenuse, set up the equation, solve.
+  * Include plot.type = "triangle" with the relevant angle (degrees) and labelled side strings (e.g. "20", "x", "√3").
+- Otherwise plot is null.
+- Keep steps concise, one logical step per item, plain unicode (no LaTeX).
+- Output JSON only, no prose around it.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });

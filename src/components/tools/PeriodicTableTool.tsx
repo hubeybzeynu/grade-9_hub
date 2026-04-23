@@ -2,6 +2,14 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Loader2 } from 'lucide-react';
 import { elements, getGridPosition, categoryColor, Element } from '@/data/periodicTable';
+import {
+  fullElectronConfiguration,
+  shellDistribution,
+  effectiveNuclearCharge,
+  ATOMIC_RADIUS_PM,
+  IONIZATION_ENERGY_KJ,
+  ELECTRON_AFFINITY_KJ,
+} from '@/lib/elementChemistry';
 import { cloudSupabase } from '@/integrations/supabase/cloudClient';
 
 const PeriodicTableTool = () => {
@@ -34,8 +42,8 @@ const PeriodicTableTool = () => {
         body: { question: `About the element ${selected.name} (${selected.symbol}, Z=${selected.number}): ${aiQuestion}` },
       });
       if (error) throw error;
-      const d = data as { answer?: string; error?: string };
-      setAiAnswer(d.answer || d.error || 'No response.');
+      const d = data as { answer?: string; error?: string; steps?: string[] };
+      setAiAnswer(d.answer ? d.answer + (d.steps?.length ? '\n\nSteps:\n' + d.steps.map((s, i) => `${i + 1}. ${s}`).join('\n') : '') : (d.error || 'No response.'));
     } catch (e) {
       setAiAnswer(`Error: ${(e as Error).message}`);
     } finally {
@@ -52,7 +60,6 @@ const PeriodicTableTool = () => {
         className="w-full px-3 py-2 rounded-xl bg-muted text-sm outline-none focus:ring-1 focus:ring-primary"
       />
 
-      {/* Full 18×9 grid (rows 1-7 main + 8-9 lanthanide/actinide) */}
       <div className="overflow-x-auto">
         <div
           className="grid gap-[2px] min-w-[540px]"
@@ -91,7 +98,6 @@ const PeriodicTableTool = () => {
         ))}
       </div>
 
-      {/* Detail modal */}
       <AnimatePresence>
         {selected && (
           <motion.div
@@ -118,27 +124,43 @@ const PeriodicTableTool = () => {
                 </button>
               </div>
 
-              <dl className="space-y-1.5 text-sm">
-                {[
-                  ['Atomic number', selected.number],
-                  ['Atomic mass', `${selected.mass} u`],
+              {(() => {
+                const fullCfg = fullElectronConfiguration(selected.number);
+                const shells = shellDistribution(selected.number);
+                const zeff = effectiveNuclearCharge(selected.number);
+                const radius = ATOMIC_RADIUS_PM[selected.number];
+                const ie = IONIZATION_ENERGY_KJ[selected.number];
+                const ea = ELECTRON_AFFINITY_KJ[selected.number];
+
+                const rows: Array<[string, string | number | null | undefined]> = [
+                  ['Atomic number (Z)', selected.number],
+                  ['Atomic mass', `${selected.mass} u (g/mol)`],
                   ['Category', selected.category],
                   ['Group / Period', `${selected.group ?? '—'} / ${selected.period}`],
                   ['Block', selected.block.toUpperCase()],
-                  ['Electron configuration', selected.electronConfig],
-                  ['Electronegativity', selected.electronegativity ?? '—'],
                   ['Phase at room temp', selected.phase],
+                  ['Electron configuration (short)', selected.electronConfig],
+                  ['Electron configuration (full)', fullCfg],
+                  ['Shell distribution', shells.join(' ')],
+                  ['Effective nuclear charge (Zeff)', zeff],
+                  ['Atomic radius', radius ? `${radius} pm` : '—'],
+                  ['1st ionization energy', ie ? `${ie} kJ/mol` : '—'],
+                  ['Electron affinity', ea ? `${ea} kJ/mol` : '—'],
+                  ['Electronegativity (Pauling)', selected.electronegativity ?? '—'],
                   selected.discoveredBy ? ['Discovered by', selected.discoveredBy] : null,
-                ].filter(Boolean).map((row) => {
-                  const [k, v] = row as [string, string | number];
-                  return (
-                    <div key={k} className="flex justify-between gap-3 border-b border-border/50 pb-1">
-                      <dt className="text-xs text-muted-foreground">{k}</dt>
-                      <dd className="text-xs font-medium text-right">{v}</dd>
-                    </div>
-                  );
-                })}
-              </dl>
+                ].filter(Boolean) as Array<[string, string | number]>;
+
+                return (
+                  <dl className="space-y-1.5 text-sm">
+                    {rows.map(([k, v]) => (
+                      <div key={k as string} className="flex justify-between gap-3 border-b border-border/50 pb-1">
+                        <dt className="text-xs text-muted-foreground">{k}</dt>
+                        <dd className="text-xs font-medium text-right break-all">{v as string | number}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                );
+              })()}
 
               <p className="text-xs text-muted-foreground mt-3">{selected.summary}</p>
 
