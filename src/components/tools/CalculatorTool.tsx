@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
-import { evaluate, parse } from 'mathjs';
+import { evaluate } from 'mathjs';
 import { Delete } from 'lucide-react';
 import QuadraticPlot from './QuadraticPlot';
 import FunctionPlot from './FunctionPlot';
+import SignChart from './SignChart';
+import TrigonometryTool from './TrigonometryTool';
 import { molarMass, parseFormula } from '@/lib/chemistry';
 
-type Mode = 'sci' | 'quad' | 'graph' | 'chem';
+type Mode = 'sci' | 'quad' | 'graph' | 'chem' | 'trig';
 
 const CalculatorTool = () => {
   const [mode, setMode] = useState<Mode>('sci');
@@ -15,8 +17,8 @@ const CalculatorTool = () => {
   const [error, setError] = useState<string>('');
   // Quadratic
   const [a, setA] = useState('1');
-  const [b, setB] = useState('0');
-  const [c, setC] = useState('0');
+  const [b, setB] = useState('-5');
+  const [c, setC] = useState('6');
   // Graph
   const [fx, setFx] = useState('x^2');
   const [xmin, setXmin] = useState('-10');
@@ -29,12 +31,16 @@ const CalculatorTool = () => {
     if (!isFinite(A) || A === 0) return { valid: false, A, B, C };
     const disc = B * B - 4 * A * C;
     const roots: number[] = [];
-    if (disc >= 0) {
+    if (disc > 0) {
       const r1 = (-B + Math.sqrt(disc)) / (2 * A);
       const r2 = (-B - Math.sqrt(disc)) / (2 * A);
       roots.push(r1, r2);
+    } else if (disc === 0) {
+      roots.push(-B / (2 * A));
     }
-    return { valid: true, A, B, C, disc, roots };
+    const vx = -B / (2 * A);
+    const vy = A * vx * vx + B * vx + C;
+    return { valid: true, A, B, C, disc, roots, vx, vy };
   }, [a, b, c]);
 
   const chem = useMemo(() => {
@@ -49,7 +55,11 @@ const CalculatorTool = () => {
 
   const safeEval = (s: string) => {
     try {
-      const r = evaluate(s);
+      // Auto-balance unclosed parens (helps with sqrt(, sin(, etc.)
+      const opens = (s.match(/\(/g) || []).length;
+      const closes = (s.match(/\)/g) || []).length;
+      const balanced = s + ')'.repeat(Math.max(0, opens - closes));
+      const r = evaluate(balanced);
       setResult(typeof r === 'number' ? Number(r.toPrecision(12)).toString() : String(r));
       setError('');
     } catch (e) {
@@ -62,7 +72,8 @@ const CalculatorTool = () => {
   const clear = () => { setExpr(''); setResult(''); setError(''); };
   const backspace = () => setExpr((p) => p.slice(0, -1));
 
-  const keys: Array<{ label: string; value?: string; action?: () => void; variant?: 'op' | 'fn' | 'eq' | 'num' }> = [
+  // Display labels (left) vs underlying math.js values (right). Functions auto-include `(`.
+  const keys: Array<{ label: React.ReactNode; value?: string; action?: () => void; variant?: 'op' | 'fn' | 'eq' | 'num' }> = [
     { label: 'AC', action: clear, variant: 'op' },
     { label: '( )', value: '()', variant: 'op' },
     { label: '%', value: '%', variant: 'op' },
@@ -73,7 +84,8 @@ const CalculatorTool = () => {
     { label: '×', value: '*', variant: 'op' },
     { label: 'ln', value: 'log(', variant: 'fn' },
     { label: 'log', value: 'log10(', variant: 'fn' },
-    { label: '√', value: 'sqrt(', variant: 'fn' },
+    // Radical key — inserts √( automatically (closing ) is auto-balanced on =).
+    { label: <span className="font-mono">√</span>, action: () => append('sqrt('), variant: 'fn' },
     { label: '−', value: '-', variant: 'op' },
     { label: 'π', value: 'pi' },
     { label: 'e', value: 'e' },
@@ -91,17 +103,23 @@ const CalculatorTool = () => {
 
   return (
     <div className="p-4 space-y-4">
-      {/* Mode pills */}
-      <div className="flex gap-1 bg-muted rounded-xl p-1 text-xs">
-        {(['sci', 'quad', 'graph', 'chem'] as Mode[]).map((m) => (
+      {/* Mode pills — horizontal scroll for the extra Trig tab */}
+      <div className="flex gap-1 bg-muted rounded-xl p-1 text-xs overflow-x-auto">
+        {([
+          ['sci', 'Scientific'],
+          ['quad', 'Quadratic'],
+          ['graph', 'Graph'],
+          ['trig', 'Trig'],
+          ['chem', 'Chem'],
+        ] as [Mode, string][]).map(([m, label]) => (
           <button
             key={m}
             onClick={() => setMode(m)}
-            className={`flex-1 px-2 py-1.5 rounded-lg font-medium ${
+            className={`flex-1 min-w-[64px] px-2 py-1.5 rounded-lg font-medium whitespace-nowrap ${
               mode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
             }`}
           >
-            {m === 'sci' ? 'Scientific' : m === 'quad' ? 'Quadratic' : m === 'graph' ? 'Graph' : 'Chem'}
+            {label}
           </button>
         ))}
       </div>
@@ -122,7 +140,6 @@ const CalculatorTool = () => {
                   if (k.action) k.action();
                   else if (k.value) {
                     if (k.value === '()') {
-                      // Smart paren toggle
                       const opens = (expr.match(/\(/g) || []).length;
                       const closes = (expr.match(/\)/g) || []).length;
                       append(opens > closes ? ')' : '(');
@@ -144,7 +161,7 @@ const CalculatorTool = () => {
             ))}
           </div>
           <p className="text-[10px] text-muted-foreground text-center">
-            Tip: use <code>x</code> as a variable or type any math.js expression.
+            Tip: press √ then your number — closing parenthesis is added automatically.
           </p>
         </div>
       )}
@@ -152,6 +169,12 @@ const CalculatorTool = () => {
       {mode === 'quad' && (
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">Solve ax² + bx + c = 0</p>
+
+          {/* Live formula preview */}
+          <div className="bg-muted rounded-xl p-3 text-center font-mono text-sm">
+            <span>{a || '?'}x² {Number(b) >= 0 ? '+' : '−'} {Math.abs(Number(b)) || '?'}x {Number(c) >= 0 ? '+' : '−'} {Math.abs(Number(c)) || '?'} = 0</span>
+          </div>
+
           <div className="grid grid-cols-3 gap-2">
             {[
               { label: 'a', val: a, set: setA },
@@ -162,6 +185,7 @@ const CalculatorTool = () => {
                 <span className="text-muted-foreground">{f.label}</span>
                 <input
                   type="number"
+                  inputMode="numeric"
                   value={f.val}
                   onChange={(e) => f.set(e.target.value)}
                   className="px-3 py-2 rounded-lg bg-muted text-sm outline-none focus:ring-1 focus:ring-primary"
@@ -169,20 +193,34 @@ const CalculatorTool = () => {
               </label>
             ))}
           </div>
+
           {quad.valid && (
-            <div className="bg-muted rounded-xl p-3 space-y-1 text-sm">
-              <p>Discriminant Δ = <b>{quad.disc?.toFixed(4)}</b></p>
-              {quad.roots.length === 2 ? (
-                <>
-                  <p>x₁ = <b>{quad.roots[0].toFixed(4)}</b></p>
-                  <p>x₂ = <b>{quad.roots[1].toFixed(4)}</b></p>
-                </>
-              ) : (
-                <p className="text-muted-foreground">No real roots.</p>
-              )}
-            </div>
+            <>
+              {/* Step-by-step using quadratic formula */}
+              <div className="bg-muted rounded-xl p-3 space-y-1 text-xs">
+                <p className="font-semibold text-foreground">Quadratic formula</p>
+                <p className="font-mono">x = (−b ± √(b² − 4ac)) / 2a</p>
+                <p>Δ = b² − 4ac = {quad.B}² − 4·{quad.A}·{quad.C} = <b>{quad.disc?.toFixed(4)}</b></p>
+                {quad.disc! > 0 ? (
+                  <>
+                    <p>Two distinct real roots:</p>
+                    <p>x₁ = <b>{quad.roots[0].toFixed(4)}</b></p>
+                    <p>x₂ = <b>{quad.roots[1].toFixed(4)}</b></p>
+                  </>
+                ) : quad.disc === 0 ? (
+                  <p>One repeated real root: x = <b>{quad.roots[0].toFixed(4)}</b></p>
+                ) : (
+                  <p className="text-muted-foreground">No real roots (Δ &lt; 0).</p>
+                )}
+                <p>Vertex: ({quad.vx!.toFixed(2)}, {quad.vy!.toFixed(2)})</p>
+              </div>
+
+              {/* Sign chart (product property) */}
+              <SignChart a={quad.A} b={quad.B} c={quad.C} roots={quad.roots} />
+
+              <QuadraticPlot a={quad.A} b={quad.B} c={quad.C} roots={quad.roots} />
+            </>
           )}
-          {quad.valid && <QuadraticPlot a={quad.A} b={quad.B} c={quad.C} roots={quad.roots} />}
           {!quad.valid && <p className="text-xs text-destructive">a must be non-zero.</p>}
         </div>
       )}
@@ -201,18 +239,20 @@ const CalculatorTool = () => {
           <div className="grid grid-cols-2 gap-2">
             <label className="flex flex-col text-xs gap-1">
               <span className="text-muted-foreground">x min</span>
-              <input type="number" value={xmin} onChange={(e) => setXmin(e.target.value)}
+              <input type="number" inputMode="numeric" value={xmin} onChange={(e) => setXmin(e.target.value)}
                 className="px-3 py-2 rounded-lg bg-muted text-sm outline-none" />
             </label>
             <label className="flex flex-col text-xs gap-1">
               <span className="text-muted-foreground">x max</span>
-              <input type="number" value={xmax} onChange={(e) => setXmax(e.target.value)}
+              <input type="number" inputMode="numeric" value={xmax} onChange={(e) => setXmax(e.target.value)}
                 className="px-3 py-2 rounded-lg bg-muted text-sm outline-none" />
             </label>
           </div>
           <FunctionPlot expr={fx} xmin={Number(xmin)} xmax={Number(xmax)} />
         </div>
       )}
+
+      {mode === 'trig' && <TrigonometryTool />}
 
       {mode === 'chem' && (
         <div className="space-y-3">

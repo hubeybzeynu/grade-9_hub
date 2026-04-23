@@ -3,6 +3,7 @@ import { Sparkles, Loader2, Send } from 'lucide-react';
 import { cloudSupabase } from '@/integrations/supabase/cloudClient';
 import QuadraticPlot from './QuadraticPlot';
 import FunctionPlot from './FunctionPlot';
+import RightTrianglePlot from './RightTrianglePlot';
 
 interface AiResponse {
   answer?: string;
@@ -10,6 +11,7 @@ interface AiResponse {
   plot?:
     | { type: 'quadratic'; a: number; b: number; c: number; roots: number[] }
     | { type: 'function'; expr: string; xmin: number; xmax: number }
+    | { type: 'triangle'; angleA: number; opposite?: string; adjacent?: string; hypotenuse?: string; caption?: string }
     | null;
   error?: string;
 }
@@ -38,22 +40,23 @@ const AiAssistantTool = () => {
 
   const examples = [
     'Solve x² - 5x + 6 = 0',
+    'In a right triangle, angle A = 30°, hypotenuse = 20. Find the opposite side.',
     'Plot f(x) = sin(x) + x/3',
     'What is the molar mass of Ca(OH)2?',
-    'Explain electron configuration of iron',
+    'Full electron configuration of iron',
   ];
 
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-center gap-2 text-sm">
         <Sparkles className="w-4 h-4 text-primary" />
-        <span className="font-semibold">Ask AI — math, physics, chemistry</span>
+        <span className="font-semibold">Ask AI — math, trig, physics, chemistry</span>
       </div>
 
       <textarea
         value={question}
         onChange={(e) => setQuestion(e.target.value)}
-        placeholder="Ask anything. Quadratic equations and graphs will be displayed."
+        placeholder="Ask anything. Quadratic equations, trig triangles, and graphs are drawn for you."
         className="w-full px-3 py-2 rounded-xl bg-muted text-sm outline-none focus:ring-1 focus:ring-primary min-h-[80px]"
       />
 
@@ -108,6 +111,18 @@ const AiAssistantTool = () => {
             <div>
               <p className="text-xs text-muted-foreground mb-1">Graph</p>
               <FunctionPlot expr={response.plot.expr} xmin={response.plot.xmin} xmax={response.plot.xmax} />
+            </div>
+          )}
+          {response.plot?.type === 'triangle' && (
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Right-angled triangle</p>
+              <RightTrianglePlot
+                angleA={response.plot.angleA}
+                opposite={response.plot.opposite}
+                adjacent={response.plot.adjacent}
+                hypotenuse={response.plot.hypotenuse}
+                caption={response.plot.caption}
+              />
             </div>
           )}
         </div>
