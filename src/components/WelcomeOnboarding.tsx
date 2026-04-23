@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Users, Award, ArrowRight, Sparkles, CheckCircle,
   ClipboardList, FileCheck, FileText, FlaskConical, Calculator, Atom,
-  TrendingUp, Sigma, LucideIcon, Info,
+  TrendingUp, Sigma, LucideIcon, Info, Play, Pause, ZoomIn, MousePointerClick,
 } from 'lucide-react';
 
 interface WelcomeOnboardingProps {
