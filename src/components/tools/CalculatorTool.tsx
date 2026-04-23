@@ -84,8 +84,8 @@ const CalculatorTool = () => {
     { label: '×', value: '*', variant: 'op' },
     { label: 'ln', value: 'log(', variant: 'fn' },
     { label: 'log', value: 'log10(', variant: 'fn' },
-    // Radical key — inserts √( and an auto-close ).
-    { label: <span className="font-mono">√(_)</span>, action: () => setExpr((p) => p + 'sqrt()' ).toString ? undefined : undefined, variant: 'fn' },
+    // Radical key — inserts √( automatically (closing ) is auto-balanced on =).
+    { label: <span className="font-mono">√</span>, action: () => append('sqrt('), variant: 'fn' },
     { label: '−', value: '-', variant: 'op' },
     { label: 'π', value: 'pi' },
     { label: 'e', value: 'e' },
@@ -100,19 +100,6 @@ const CalculatorTool = () => {
     { label: '0', value: '0' }, { label: '.', value: '.' }, { label: '+/-', action: () => setExpr((p) => p.startsWith('-') ? p.slice(1) : '-' + p) },
     { label: '=', action: () => safeEval(expr), variant: 'eq' },
   ];
-
-  // Special handler for the radical key: insert √( with cursor inside and an auto-close.
-  // We override the radical key's action by replacing it after the array is built so the
-  // display label stays a styled element.
-  const radicalIndex = 10;
-  keys[radicalIndex] = {
-    ...keys[radicalIndex],
-    action: () => {
-      // Insert sqrt() and place a closing automatically. The user types the radicand,
-      // then presses = — extra ')' is auto-balanced in safeEval too.
-      setExpr((p) => p + 'sqrt(');
-    },
-  };
 
   return (
     <div className="p-4 space-y-4">

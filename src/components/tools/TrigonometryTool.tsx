@@ -116,9 +116,9 @@ const TrigonometryTool = () => {
             <thead className="sticky top-0 bg-card">
               <tr className="border-b border-border">
                 <th className="px-2 py-1.5 text-left font-medium">°</th>
-                <th className="px-2 py-1.5 font-medium text-rose-500">sin</th>
-                <th className="px-2 py-1.5 font-medium text-emerald-500">cos</th>
-                <th className="px-2 py-1.5 font-medium text-amber-500">tan</th>
+                <th className="px-2 py-1.5 font-medium">sin</th>
+                <th className="px-2 py-1.5 font-medium">cos</th>
+                <th className="px-2 py-1.5 font-medium">tan</th>
               </tr>
             </thead>
             <tbody className="font-mono">
