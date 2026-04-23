@@ -394,6 +394,27 @@ const WelcomeOnboarding = ({ onComplete }: WelcomeOnboardingProps) => {
   const handleNext = () => (isLastStep ? onComplete() : setCurrentStep(currentStep + 1));
   const handleSkip = () => onComplete();
 
+  // Auto-play: advance every 4.5s when enabled. Stops on last step.
+  useEffect(() => {
+    if (!autoPlay) return;
+    if (isLastStep) {
+      setAutoPlay(false);
+      return;
+    }
+    timerRef.current = window.setTimeout(() => {
+      setZoomed(false);
+      setCurrentStep((s) => s + 1);
+    }, 4500);
+    return () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
+  }, [autoPlay, currentStep, isLastStep]);
+
+  // Reset zoom when step changes
+  useEffect(() => {
+    setZoomed(false);
+  }, [currentStep]);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
