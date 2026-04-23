@@ -223,6 +223,9 @@ const previewInfo = (
 
 const WelcomeOnboarding = ({ onComplete }: WelcomeOnboardingProps) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const [zoomed, setZoomed] = useState(false);
+  const [autoPlay, setAutoPlay] = useState(false);
+  const timerRef = useRef<number | null>(null);
 
   const steps: Step[] = [
     {
