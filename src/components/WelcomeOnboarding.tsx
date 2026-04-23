@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Users, Award, ArrowRight, Sparkles, CheckCircle,
   ClipboardList, FileCheck, FileText, FlaskConical, Calculator, Atom,
-  TrendingUp, Sigma, LucideIcon, Info,
+  TrendingUp, Sigma, LucideIcon, Info, Play, Pause, ZoomIn, MousePointerClick,
 } from 'lucide-react';
 
 interface WelcomeOnboardingProps {
@@ -223,6 +223,9 @@ const previewInfo = (
 
 const WelcomeOnboarding = ({ onComplete }: WelcomeOnboardingProps) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const [zoomed, setZoomed] = useState(false);
+  const [autoPlay, setAutoPlay] = useState(false);
+  const timerRef = useRef<number | null>(null);
 
   const steps: Step[] = [
     {
@@ -391,6 +394,27 @@ const WelcomeOnboarding = ({ onComplete }: WelcomeOnboardingProps) => {
   const handleNext = () => (isLastStep ? onComplete() : setCurrentStep(currentStep + 1));
   const handleSkip = () => onComplete();
 
+  // Auto-play: advance every 4.5s when enabled. Stops on last step.
+  useEffect(() => {
+    if (!autoPlay) return;
+    if (isLastStep) {
+      setAutoPlay(false);
+      return;
+    }
+    timerRef.current = window.setTimeout(() => {
+      setZoomed(false);
+      setCurrentStep((s) => s + 1);
+    }, 4500);
+    return () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
+  }, [autoPlay, currentStep, isLastStep]);
+
+  // Reset zoom when step changes
+  useEffect(() => {
+    setZoomed(false);
+  }, [currentStep]);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -440,7 +464,23 @@ const WelcomeOnboarding = ({ onComplete }: WelcomeOnboardingProps) => {
               {currentStepData.definition}
             </p>
 
-            <div className="mb-3">{currentStepData.preview}</div>
+            {/* Live preview with click-to-zoom */}
+            <motion.div
+              className="mb-2 cursor-zoom-in select-none"
+              onClick={() => setZoomed((z) => !z)}
+              animate={{ scale: zoomed ? 1.55 : 1 }}
+              transition={{ type: 'spring', stiffness: 220, damping: 22 }}
+              style={{ transformOrigin: 'center top' }}
+            >
+              {currentStepData.preview}
+            </motion.div>
+            <p className="text-[11px] text-muted-foreground mb-3 flex items-center justify-center gap-1">
+              {zoomed ? (
+                <><MousePointerClick className="w-3 h-3" /> Tap preview again to zoom out</>
+              ) : (
+                <><ZoomIn className="w-3 h-3" /> Tap the preview to zoom in and see the function</>
+              )}
+            </p>
 
             <p className="text-muted-foreground text-sm leading-relaxed mb-3">
               {currentStepData.description}
@@ -456,6 +496,21 @@ const WelcomeOnboarding = ({ onComplete }: WelcomeOnboardingProps) => {
                   <li key={i}>{line}</li>
                 ))}
               </ol>
+            </div>
+
+            <div className="flex gap-2 mb-2">
+              <button
+                onClick={() => setAutoPlay((p) => !p)}
+                className="flex-1 py-2.5 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium flex items-center justify-center gap-2 active:scale-95 transition-transform"
+              >
+                {autoPlay ? (
+                  <><Pause className="w-4 h-4" /> Pause demo</>
+                ) : currentStep === 0 ? (
+                  <><Play className="w-4 h-4" /> Start auto demo</>
+                ) : (
+                  <><Play className="w-4 h-4" /> Resume demo</>
+                )}
+              </button>
             </div>
 
             <div className="flex gap-2">
