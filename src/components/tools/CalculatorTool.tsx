@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { evaluate, parse } from 'mathjs';
+import { evaluate } from 'mathjs';
 import { Delete } from 'lucide-react';
 import QuadraticPlot from './QuadraticPlot';
 import FunctionPlot from './FunctionPlot';
