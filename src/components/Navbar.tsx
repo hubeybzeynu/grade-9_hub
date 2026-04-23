@@ -36,20 +36,23 @@ const Navbar = ({ currentPage, onNavigate }: NavbarProps) => {
 
   return (
     <>
-      {/* Top App Bar */}
-      <div className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-4 bg-card border-b border-border">
-        <div className="flex items-center gap-3">
+      {/* Top App Bar — Info button moved to LEFT of the title so it isn't covered by the floating Tools button on the right. */}
+      <div className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-3 bg-card border-b border-border">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onNavigate('info')}
+            aria-label="Info"
+            className={`p-2 rounded-full transition-colors ${
+              currentPage === 'info' ? 'bg-primary/15 text-primary' : 'text-muted-foreground active:bg-muted'
+            }`}
+          >
+            <Info className="w-5 h-5" />
+          </button>
           <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-full" />
-          <span className="text-base font-semibold text-foreground">Grade 9 Portal</span>
+          <span className="text-base font-semibold text-foreground truncate">Grade 9 Portal</span>
         </div>
-        <button
-          onClick={() => onNavigate('info')}
-          className={`p-2 rounded-full transition-colors ${
-            currentPage === 'info' ? 'bg-primary/15 text-primary' : 'text-muted-foreground active:bg-muted'
-          }`}
-        >
-          <Info className="w-5 h-5" />
-        </button>
+        {/* Right side intentionally left empty — the floating ToolsFab lives there (top-3 right-3). */}
+        <div className="w-11" aria-hidden="true" />
       </div>
 
       {/* More Menu Overlay */}
