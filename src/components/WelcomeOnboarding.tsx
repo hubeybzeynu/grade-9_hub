@@ -464,7 +464,23 @@ const WelcomeOnboarding = ({ onComplete }: WelcomeOnboardingProps) => {
               {currentStepData.definition}
             </p>
 
-            <div className="mb-3">{currentStepData.preview}</div>
+            {/* Live preview with click-to-zoom */}
+            <motion.div
+              className="mb-2 cursor-zoom-in select-none"
+              onClick={() => setZoomed((z) => !z)}
+              animate={{ scale: zoomed ? 1.55 : 1 }}
+              transition={{ type: 'spring', stiffness: 220, damping: 22 }}
+              style={{ transformOrigin: 'center top' }}
+            >
+              {currentStepData.preview}
+            </motion.div>
+            <p className="text-[11px] text-muted-foreground mb-3 flex items-center justify-center gap-1">
+              {zoomed ? (
+                <><MousePointerClick className="w-3 h-3" /> Tap preview again to zoom out</>
+              ) : (
+                <><ZoomIn className="w-3 h-3" /> Tap the preview to zoom in and see the function</>
+              )}
+            </p>
 
             <p className="text-muted-foreground text-sm leading-relaxed mb-3">
               {currentStepData.description}
