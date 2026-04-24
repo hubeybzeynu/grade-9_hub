@@ -259,6 +259,9 @@ const CalculatorTool = () => {
       )}
 
       {mode === 'trig' && <TrigonometryTool />}
+      {mode === 'matrix' && <MatrixTool />}
+      {mode === 'stats' && <StatsTool />}
+      {mode === 'units' && <UnitConverterTool />}
 
       {mode === 'chem' && (
         <div className="space-y-3">
