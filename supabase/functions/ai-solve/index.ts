@@ -1,5 +1,6 @@
 // Edge function: AI math / physics / chemistry / trigonometry tutor.
 // Calls Lovable AI Gateway and returns a structured JSON answer.
+// Supports text + optional image (base64 data URL). Voice is handled client-side.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -8,15 +9,24 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `You are a Grade 9 STEM tutor. The user will ask math, physics, chemistry, or trigonometry questions.
+const SHAPES = [
+  'square', 'rectangle', 'circle', 'triangle', 'right-triangle',
+  'pentagon', 'hexagon', 'heptagon', 'octagon',
+  'parallelogram', 'trapezoid', 'rhombus',
+  'square-in-circle', 'circle-in-square', 'triangle-in-circle',
+];
+
+const SYSTEM_PROMPT = `You are a Grade 9 STEM tutor (math, physics, chemistry, trigonometry, geometry).
 Respond with a SINGLE JSON object (no markdown, no code fences) of this shape:
 {
-  "answer": "short plain-text final answer",
+  "answer": "short plain-text final answer with units",
   "steps": ["step 1", "step 2", "..."],
   "plot": null
         | { "type": "quadratic", "a": number, "b": number, "c": number, "roots": number[] }
         | { "type": "function", "expr": "math.js expression in x", "xmin": number, "xmax": number }
         | { "type": "triangle", "angleA": number, "opposite"?: string, "adjacent"?: string, "hypotenuse"?: string, "caption"?: string }
+        | { "type": "shape", "shape": "${SHAPES.join('|')}", "side"?: number, "width"?: number, "height"?: number, "radius"?: number, "caption"?: string, "label"?: string }
+        | { "type": "elements", "symbols": ["H","O", ...], "caption"?: string }
 }
 Rules:
 - For quadratic equations or y = ax^2+bx+c, include plot.type = "quadratic" with numeric a,b,c and roots.
@@ -24,7 +34,9 @@ Rules:
 - For trigonometry questions involving a right-angled triangle (sin/cos/tan, finding a side/angle, SOH-CAH-TOA), ALWAYS:
   * Show the answer with units.
   * In "steps", explicitly write SOH-CAH-TOA, identify opposite/adjacent/hypotenuse, set up the equation, solve.
-  * Include plot.type = "triangle" with the relevant angle (degrees) and labelled side strings (e.g. "20", "x", "√3").
+  * Include plot.type = "triangle" with the relevant angle (degrees) and labelled side strings.
+- For geometry/area/perimeter of a shape (square, circle, rectangle, hexagon, square-in-circle, etc.), use plot.type = "shape" with the chosen shape name and dimensions, and put the area/perimeter result in "label".
+- For chemistry questions about a chemical / compound / reaction, list the involved element symbols in plot.type = "elements" so the periodic table can highlight them.
 - Otherwise plot is null.
 - Keep steps concise, one logical step per item, plain unicode (no LaTeX).
 - Output JSON only, no prose around it.`;
@@ -33,9 +45,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { question } = await req.json();
-    if (!question || typeof question !== "string") {
-      return new Response(JSON.stringify({ error: "Missing 'question'" }), {
+    const { question, imageBase64 } = await req.json();
+    if ((!question || typeof question !== "string") && !imageBase64) {
+      return new Response(JSON.stringify({ error: "Missing 'question' or image" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -44,6 +56,14 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
+    // Build user message (multimodal if an image is provided).
+    const userContent: unknown = imageBase64
+      ? [
+          { type: "text", text: question || "Solve / explain this problem." },
+          { type: "image_url", image_url: { url: imageBase64 } },
+        ]
+      : question;
+
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -51,10 +71,10 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: imageBase64 ? "google/gemini-2.5-flash" : "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: question },
+          { role: "user", content: userContent },
         ],
         response_format: { type: "json_object" },
       }),
