@@ -68,22 +68,25 @@ const PeriodicTableTool = () => {
             gridTemplateRows: 'repeat(9, minmax(28px, 1fr))',
           }}
         >
-          {elements.map((el) => {
+          {elements.map((el, idx) => {
             const pos = getGridPosition(el);
             if (!pos) return null;
             const dim = query && !matchedSet.has(el.number);
             return (
-              <button
+              <motion.button
                 key={el.number}
                 onClick={() => setSelected(el)}
                 style={{ gridColumn: pos.col, gridRow: pos.row }}
-                className={`${categoryColor(el.category)} rounded-[4px] flex flex-col items-center justify-center text-white active:scale-95 transition-all leading-none p-0.5 ${
-                  dim ? 'opacity-20' : ''
-                }`}
+                initial={{ opacity: 0, scale: 0.4, rotate: -10 }}
+                animate={{ opacity: dim ? 0.2 : 1, scale: 1, rotate: 0 }}
+                transition={{ delay: Math.min(idx * 0.008, 0.9), type: 'spring', stiffness: 220, damping: 18 }}
+                whileHover={{ scale: 1.18, zIndex: 10 }}
+                whileTap={{ scale: 0.92 }}
+                className={`${categoryColor(el.category)} rounded-[4px] flex flex-col items-center justify-center text-white leading-none p-0.5`}
               >
                 <span className="text-[7px] opacity-80">{el.number}</span>
                 <span className="text-[11px] font-bold">{el.symbol}</span>
-              </button>
+              </motion.button>
             );
           })}
         </div>
