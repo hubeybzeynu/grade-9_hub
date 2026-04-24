@@ -5,9 +5,12 @@ import QuadraticPlot from './QuadraticPlot';
 import FunctionPlot from './FunctionPlot';
 import SignChart from './SignChart';
 import TrigonometryTool from './TrigonometryTool';
+import MatrixTool from './MatrixTool';
+import StatsTool from './StatsTool';
+import UnitConverterTool from './UnitConverterTool';
 import { molarMass, parseFormula } from '@/lib/chemistry';
 
-type Mode = 'sci' | 'quad' | 'graph' | 'chem' | 'trig';
+type Mode = 'sci' | 'quad' | 'graph' | 'chem' | 'trig' | 'matrix' | 'stats' | 'units';
 
 const CalculatorTool = () => {
   const [mode, setMode] = useState<Mode>('sci');
@@ -106,16 +109,19 @@ const CalculatorTool = () => {
       {/* Mode pills — horizontal scroll for the extra Trig tab */}
       <div className="flex gap-1 bg-muted rounded-xl p-1 text-xs overflow-x-auto">
         {([
-          ['sci', 'Scientific'],
+          ['sci', 'Sci'],
           ['quad', 'Quadratic'],
           ['graph', 'Graph'],
           ['trig', 'Trig'],
+          ['matrix', 'Matrix'],
+          ['stats', 'Stats'],
+          ['units', 'Units'],
           ['chem', 'Chem'],
         ] as [Mode, string][]).map(([m, label]) => (
           <button
             key={m}
             onClick={() => setMode(m)}
-            className={`flex-1 min-w-[64px] px-2 py-1.5 rounded-lg font-medium whitespace-nowrap ${
+            className={`flex-1 min-w-[60px] px-2 py-1.5 rounded-lg font-medium whitespace-nowrap ${
               mode === m ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
             }`}
           >
