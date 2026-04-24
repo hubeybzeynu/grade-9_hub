@@ -270,10 +270,10 @@ const PhoneFrame = ({
           transform: `scale(${finalScale})`,
           transformOrigin: 'top left',
         }}
-        className="rounded-[36px] border-[6px] border-neutral-800 bg-neutral-900 shadow-2xl overflow-hidden relative"
+        className="rounded-[36px] border-[6px] border-foreground/80 bg-foreground shadow-2xl overflow-hidden relative"
       >
         {/* Dynamic-island-ish top notch */}
-        <div className="absolute top-1 left-1/2 -translate-x-1/2 w-24 h-4 rounded-full bg-neutral-800 z-[200]" />
+        <div className="absolute top-1 left-1/2 -translate-x-1/2 w-24 h-4 rounded-full bg-foreground z-[200]" />
         <div className="absolute inset-0 overflow-hidden rounded-[28px]">{children}</div>
       </div>
     </div>
@@ -305,7 +305,7 @@ const Finger = ({
       transition={{ duration: 1, repeat: Infinity }}
       className="absolute -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2 w-10 h-10 rounded-full border-2 border-primary"
     />
-    <div className="w-9 h-9 rounded-full bg-white border-2 border-primary shadow-lg flex items-center justify-center">
+    <div className="w-9 h-9 rounded-full bg-background border-2 border-primary shadow-lg flex items-center justify-center">
       <Hand className="w-4 h-4 text-primary -rotate-12" />
     </div>
   </motion.div>

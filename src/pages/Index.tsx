@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import SplashScreen from '@/components/SplashScreen';
-import WelcomeOnboarding from '@/components/WelcomeOnboarding';
+import LivePreviewTour from '@/components/LivePreviewTour';
 import Navbar from '@/components/Navbar';
 import HomePage from '@/components/HomePage';
 import TextbooksPage from '@/components/TextbooksPage';
@@ -70,7 +70,7 @@ const Index = () => {
   if (!onboarded) {
     return (
       <AnimatePresence>
-        <WelcomeOnboarding onComplete={handleOnboardComplete} />
+        <LivePreviewTour onComplete={handleOnboardComplete} />
       </AnimatePresence>
     );
   }
