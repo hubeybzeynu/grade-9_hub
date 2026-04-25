@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Sparkles, Loader2, Send, Mic, MicOff, Image as ImageIcon, X, Volume2, VolumeX } from 'lucide-react';
 import { cloudSupabase } from '@/integrations/supabase/cloudClient';
+import { aiCache } from '@/lib/aiCache';
 import QuadraticPlot from './QuadraticPlot';
 import FunctionPlot from './FunctionPlot';
 import RightTrianglePlot from './RightTrianglePlot';
@@ -111,7 +112,17 @@ const AiAssistantTool = () => {
         body: { question, imageBase64 },
       });
       if (error) throw error;
-      setResponse(data as AiResponse);
+      const r = data as AiResponse;
+      setResponse(r);
+      // Save to offline cache so the student can re-read it without internet.
+      if (r?.answer && !r.error) {
+        aiCache.save({
+          question: question.trim() || '(image only)',
+          answer: r.answer,
+          steps: r.steps,
+          plot: r.plot,
+        });
+      }
     } catch (e) {
       setResponse({ error: (e as Error).message });
     } finally {
