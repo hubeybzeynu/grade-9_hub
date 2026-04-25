@@ -1,11 +1,14 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Calculator as CalcIcon, Atom, Sparkles, X } from 'lucide-react';
+import { Calculator as CalcIcon, Atom, Sparkles, X, Camera, BookOpen, History } from 'lucide-react';
 import CalculatorTool from './tools/CalculatorTool';
 import PeriodicTableTool from './tools/PeriodicTableTool';
 import AiAssistantTool from './tools/AiAssistantTool';
+import LiveCameraTool from './tools/LiveCameraTool';
+import OfflineReferenceTool from './tools/OfflineReferenceTool';
+import AiHistoryTool from './tools/AiHistoryTool';
 
-type Tab = 'calc' | 'table' | 'ai';
+type Tab = 'calc' | 'table' | 'ai' | 'live' | 'book' | 'history';
 
 interface ToolsModalProps {
   open: boolean;
@@ -18,9 +21,12 @@ const ToolsModal = ({ open, onClose, initialTab = 'calc' }: ToolsModalProps) => 
 
   const tabs = useMemo(
     () => [
-      { id: 'calc' as Tab, label: 'Calculator', icon: CalcIcon },
+      { id: 'calc' as Tab, label: 'Calc', icon: CalcIcon },
       { id: 'table' as Tab, label: 'Elements', icon: Atom },
       { id: 'ai' as Tab, label: 'Ask AI', icon: Sparkles },
+      { id: 'live' as Tab, label: 'Live', icon: Camera },
+      { id: 'book' as Tab, label: 'Offline', icon: BookOpen },
+      { id: 'history' as Tab, label: 'History', icon: History },
     ],
     [],
   );
@@ -42,8 +48,8 @@ const ToolsModal = ({ open, onClose, initialTab = 'calc' }: ToolsModalProps) => 
         className="bg-card w-full md:max-w-2xl md:rounded-2xl border border-border flex flex-col max-h-screen md:max-h-[90vh]"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-          <div className="flex gap-1 bg-muted rounded-xl p-1">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0 gap-2">
+          <div className="flex gap-1 bg-muted rounded-xl p-1 overflow-x-auto flex-1 min-w-0">
             {tabs.map((t) => {
               const Icon = t.icon;
               const active = tab === t.id;
@@ -51,7 +57,7 @@ const ToolsModal = ({ open, onClose, initialTab = 'calc' }: ToolsModalProps) => 
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  className={`shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
                     active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
                   }`}
                 >
@@ -63,7 +69,7 @@ const ToolsModal = ({ open, onClose, initialTab = 'calc' }: ToolsModalProps) => 
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg bg-destructive/10 active:bg-destructive/20"
+            className="shrink-0 p-2 rounded-lg bg-destructive/10 active:bg-destructive/20"
             aria-label="Close"
           >
             <X className="w-4 h-4 text-destructive" />
@@ -75,6 +81,9 @@ const ToolsModal = ({ open, onClose, initialTab = 'calc' }: ToolsModalProps) => 
           {tab === 'calc' && <CalculatorTool />}
           {tab === 'table' && <PeriodicTableTool />}
           {tab === 'ai' && <AiAssistantTool />}
+          {tab === 'live' && <LiveCameraTool />}
+          {tab === 'book' && <OfflineReferenceTool />}
+          {tab === 'history' && <AiHistoryTool />}
         </div>
       </motion.div>
     </motion.div>
