@@ -1,14 +1,15 @@
-// Offline history of AI Q&A — students can re-read past answers without internet.
+// Saved chats — each chat groups all messages on the same topic.
+// Tap a chat to read its messages; long-press / delete to remove it.
 import { useEffect, useState } from 'react';
-import { History, Trash2, Volume2, VolumeX, WifiOff, X } from 'lucide-react';
-import { aiCache, type CachedAnswer } from '@/lib/aiCache';
+import { History, Trash2, Volume2, VolumeX, ChevronLeft, MessageSquarePlus, Pencil } from 'lucide-react';
+import { aiChat, type ChatThread } from '@/lib/aiCache';
 
 const AiHistoryTool = () => {
-  const [items, setItems] = useState<CachedAnswer[]>([]);
-  const [open, setOpen] = useState<string | null>(null);
+  const [chats, setChats] = useState<ChatThread[]>([]);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
 
-  const refresh = () => setItems(aiCache.list());
+  const refresh = () => setChats(aiChat.list());
   useEffect(() => { refresh(); }, []);
   useEffect(() => () => window.speechSynthesis?.cancel(), []);
 
@@ -23,83 +24,162 @@ const AiHistoryTool = () => {
   };
   const stopSpeak = () => { window.speechSynthesis?.cancel(); setSpeakingId(null); };
 
-  const remove = (id: string) => { aiCache.remove(id); refresh(); };
+  const removeChat = (id: string) => {
+    if (!confirm('Delete this chat?')) return;
+    aiChat.remove(id); refresh();
+    if (openId === id) setOpenId(null);
+  };
   const clearAll = () => {
-    if (confirm('Delete all saved answers?')) { aiCache.clear(); refresh(); }
+    if (!confirm('Delete all chats?')) return;
+    aiChat.clear(); refresh(); setOpenId(null);
+  };
+  const newChat = () => {
+    const c = aiChat.create();
+    refresh();
+    setOpenId(c.id);
+  };
+  const rename = (id: string, current: string) => {
+    const t = prompt('Rename chat', current);
+    if (t && t.trim()) { aiChat.rename(id, t.trim()); refresh(); }
   };
 
+  const open = openId ? chats.find((c) => c.id === openId) : null;
+
+  // ---------- Detail view ----------
+  if (open) {
+    return (
+      <div className="p-3 space-y-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { stopSpeak(); setOpenId(null); }}
+            className="p-1.5 rounded-lg bg-muted"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold truncate">{open.title}</p>
+            <p className="text-[10px] text-muted-foreground">
+              {new Date(open.updatedAt).toLocaleString()} · {open.messages.length} messages
+            </p>
+          </div>
+          <button
+            onClick={() => rename(open.id, open.title)}
+            className="p-1.5 rounded-lg bg-muted"
+            title="Rename"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => removeChat(open.id)}
+            className="p-1.5 rounded-lg bg-destructive/10 text-destructive"
+            title="Delete chat"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          {open.messages.map((m) => {
+            const isSpeak = speakingId === m.id;
+            return (
+              <div
+                key={m.id}
+                className={`relative rounded-2xl px-3 py-2 text-sm max-w-[90%] ${
+                  m.role === 'user'
+                    ? 'ml-auto bg-muted'
+                    : 'mr-auto bg-primary/10 border border-primary/20 pr-9'
+                }`}
+              >
+                <p className="whitespace-pre-wrap break-words">{m.text}</p>
+                {m.role === 'assistant' && (
+                  <button
+                    onClick={() => (isSpeak ? stopSpeak() : speak(m.id, m.text))}
+                    className="absolute top-1.5 right-1.5 p-1 rounded-md bg-background/80"
+                    title={isSpeak ? 'Stop' : 'Read aloud'}
+                  >
+                    {isSpeak ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                  </button>
+                )}
+                {m.role === 'assistant' && m.steps && m.steps.length > 0 && (
+                  <div className="mt-2 bg-background/60 rounded-lg p-2">
+                    <p className="text-[10px] text-muted-foreground mb-1">Steps</p>
+                    <ol className="list-decimal list-inside space-y-0.5 text-xs">
+                      {m.steps.map((s, i) => <li key={i}>{s}</li>)}
+                    </ol>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {open.messages.length === 0 && (
+            <p className="text-center text-xs text-muted-foreground py-8">
+              This chat is empty. Open Ask AI or Live and start asking — your messages will be saved here.
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ---------- List view ----------
   return (
-    <div className="p-4 space-y-3">
+    <div className="p-3 space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm">
           <History className="w-4 h-4 text-primary" />
-          <span className="font-semibold">Saved AI answers</span>
+          <span className="font-semibold">Chats</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1 text-[10px] text-emerald-600 bg-emerald-500/10 px-2 py-1 rounded-full">
-            <WifiOff className="w-3 h-3" />Works offline
-          </span>
-          {items.length > 0 && (
-            <button onClick={clearAll} className="text-[10px] text-destructive bg-destructive/10 px-2 py-1 rounded-full">
+          <button
+            onClick={newChat}
+            className="flex items-center gap-1 text-[11px] bg-primary text-primary-foreground px-2 py-1 rounded-full"
+          >
+            <MessageSquarePlus className="w-3 h-3" /> New
+          </button>
+          {chats.length > 0 && (
+            <button
+              onClick={clearAll}
+              className="text-[11px] text-destructive bg-destructive/10 px-2 py-1 rounded-full"
+            >
               Clear all
             </button>
           )}
         </div>
       </div>
 
-      {items.length === 0 && (
+      {chats.length === 0 && (
         <div className="text-center py-12">
           <History className="w-10 h-10 mx-auto opacity-30" />
           <p className="text-xs text-muted-foreground mt-2">
-            Answers from Ask AI and Live Camera are saved here automatically.<br />
-            They stay on your phone and work without internet.
+            No chats yet.<br />
+            Start a conversation in <b>Ask AI</b> or <b>Live</b> — every topic is saved here.
           </p>
         </div>
       )}
 
       <div className="space-y-2">
-        {items.map((item) => {
-          const isOpen = open === item.id;
-          const isSpeak = speakingId === item.id;
+        {chats.map((c) => {
+          const last = c.messages[c.messages.length - 1];
           return (
-            <div key={item.id} className="bg-card border border-border rounded-xl overflow-hidden">
-              <button onClick={() => setOpen(isOpen ? null : item.id)} className="w-full text-left p-3">
-                <p className="text-[10px] text-muted-foreground">
-                  {new Date(item.createdAt).toLocaleString()}
+            <button
+              key={c.id}
+              onClick={() => { aiChat.setActiveId(c.id); setOpenId(c.id); }}
+              className="w-full text-left bg-card border border-border rounded-xl p-3 active:bg-muted"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-medium truncate flex-1">{c.title}</p>
+                <span className="text-[10px] text-muted-foreground shrink-0">
+                  {new Date(c.updatedAt).toLocaleDateString()}
+                </span>
+              </div>
+              {last && (
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                  <span className="font-medium">{last.role === 'user' ? 'You: ' : 'AI: '}</span>
+                  {last.text}
                 </p>
-                <p className="text-sm font-medium line-clamp-2 mt-0.5">{item.question}</p>
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{item.answer}</p>
-              </button>
-
-              {isOpen && (
-                <div className="border-t border-border px-3 pb-3 pt-2 space-y-2">
-                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-2 relative">
-                    <p className="text-[10px] text-muted-foreground">Answer</p>
-                    <p className="text-sm font-semibold pr-7">{item.answer}</p>
-                    <button
-                      onClick={() => (isSpeak ? stopSpeak() : speak(item.id, item.answer))}
-                      className="absolute top-1 right-1 p-1 rounded-md bg-background/80"
-                    >
-                      {isSpeak ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                  {item.steps && item.steps.length > 0 && (
-                    <div className="bg-muted rounded-lg p-2">
-                      <p className="text-[10px] text-muted-foreground mb-1">Steps</p>
-                      <ol className="list-decimal list-inside space-y-0.5 text-xs">
-                        {item.steps.map((s, i) => <li key={i}>{s}</li>)}
-                      </ol>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => remove(item.id)}
-                    className="flex items-center gap-1 text-[11px] text-destructive bg-destructive/10 px-2 py-1 rounded-md"
-                  >
-                    <Trash2 className="w-3 h-3" /> Delete
-                  </button>
-                </div>
               )}
-            </div>
+              <p className="text-[10px] text-muted-foreground mt-1">{c.messages.length} messages</p>
+            </button>
           );
         })}
       </div>
