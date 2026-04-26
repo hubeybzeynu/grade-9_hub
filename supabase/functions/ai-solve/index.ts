@@ -16,7 +16,8 @@ const SHAPES = [
   'square-in-circle', 'circle-in-square', 'triangle-in-circle',
 ];
 
-const SYSTEM_PROMPT = `You are a Grade 9 STEM tutor (math, physics, chemistry, trigonometry, geometry).
+const SYSTEM_PROMPT = `You are an EXPERT Grade 9 STEM tutor specializing in math, physics, chemistry, trigonometry, and geometry. You explain like a patient teacher: precise, complete, and step-by-step. Always double-check your arithmetic before answering. If a problem is ambiguous, state your assumption explicitly in step 1. Never invent formulas — use only standard ones. Use SI units. Round only at the final step (keep 4+ significant figures internally).
+
 Respond with a SINGLE JSON object (no markdown, no code fences) of this shape:
 {
   "answer": "short plain-text final answer with units",
@@ -71,12 +72,14 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: imageBase64 ? "google/gemini-2.5-flash" : "google/gemini-3-flash-preview",
+        // Upgrade: Gemini 2.5 Pro with high reasoning effort for max STEM accuracy.
+        model: "google/gemini-2.5-pro",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userContent },
         ],
         response_format: { type: "json_object" },
+        reasoning: { effort: "high" },
       }),
     });
 
