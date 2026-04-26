@@ -1,14 +1,13 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Calculator as CalcIcon, Atom, Sparkles, X, Camera, BookOpen, History } from 'lucide-react';
+import { Calculator as CalcIcon, Atom, Sparkles, X, Camera, MessageSquare } from 'lucide-react';
 import CalculatorTool from './tools/CalculatorTool';
 import PeriodicTableTool from './tools/PeriodicTableTool';
 import AiAssistantTool from './tools/AiAssistantTool';
 import LiveCameraTool from './tools/LiveCameraTool';
-import OfflineReferenceTool from './tools/OfflineReferenceTool';
 import AiHistoryTool from './tools/AiHistoryTool';
 
-type Tab = 'calc' | 'table' | 'ai' | 'live' | 'book' | 'history';
+type Tab = 'calc' | 'table' | 'ai' | 'live' | 'history';
 
 interface ToolsModalProps {
   open: boolean;
@@ -25,8 +24,7 @@ const ToolsModal = ({ open, onClose, initialTab = 'calc' }: ToolsModalProps) => 
       { id: 'table' as Tab, label: 'Elements', icon: Atom },
       { id: 'ai' as Tab, label: 'Ask AI', icon: Sparkles },
       { id: 'live' as Tab, label: 'Live', icon: Camera },
-      { id: 'book' as Tab, label: 'Offline', icon: BookOpen },
-      { id: 'history' as Tab, label: 'History', icon: History },
+      { id: 'history' as Tab, label: 'Chats', icon: MessageSquare },
     ],
     [],
   );
@@ -82,7 +80,6 @@ const ToolsModal = ({ open, onClose, initialTab = 'calc' }: ToolsModalProps) => 
           {tab === 'table' && <PeriodicTableTool />}
           {tab === 'ai' && <AiAssistantTool />}
           {tab === 'live' && <LiveCameraTool />}
-          {tab === 'book' && <OfflineReferenceTool />}
           {tab === 'history' && <AiHistoryTool />}
         </div>
       </motion.div>

@@ -1,118 +1,86 @@
-// Live camera + voice mode — Gemini-Live style.
-// - Opens the device camera (rear by default).
-// - Lets the student speak a question (Web Speech API) or type one.
-// - On "Ask", captures a frame from the live video and sends both the
-//   image + question to the existing ai-solve edge function.
-// - Speaks the answer aloud (Web Speech Synthesis).
-// - Saves the Q+A to the offline cache for re-reading without internet.
+// Live AI mode — Gemini-Live style.
+// Flow:
+//   1. User taps "Start". Camera opens (rear by default) and the mic starts
+//      continuously listening.
+//   2. When the user finishes a sentence (Web Speech finalises the transcript),
+//      the app auto-captures the current camera frame and sends both the
+//      transcript + frame to the ai-solve edge function.
+//   3. The reply is automatically spoken out loud (TTS) and shown as a chat
+//      bubble overlay, in the style of the Gemini Live screen the user shared.
+//   4. All Q+A pairs are appended to the active chat thread so they appear in
+//      the "Chats" tab.
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Mic, MicOff, Loader2, Volume2, VolumeX, RefreshCw, Send, Download, X, WifiOff } from 'lucide-react';
+import {
+  Camera, Mic, MicOff, Loader2, Volume2, VolumeX, RefreshCw, X, Sparkles,
+} from 'lucide-react';
 import { cloudSupabase } from '@/integrations/supabase/cloudClient';
-import { aiCache } from '@/lib/aiCache';
+import { aiChat } from '@/lib/aiCache';
 
 type SR = any;
+
+interface Bubble {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+}
 
 const LiveCameraTool = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const recognitionRef = useRef<SR | null>(null);
+  const inflightRef = useRef(false);
+  const chatIdRef = useRef<string | null>(null);
+  const liveOnRef = useRef(false);
 
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
-  const [cameraOn, setCameraOn] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [liveOn, setLiveOn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [question, setQuestion] = useState('');
-  const [recording, setRecording] = useState(false);
+  const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [interim, setInterim] = useState('');
-
-  const [loading, setLoading] = useState(false);
-  const [answer, setAnswer] = useState<string | null>(null);
-  const [steps, setSteps] = useState<string[] | undefined>(undefined);
-  const [snapshot, setSnapshot] = useState<string | null>(null);
-
-  const [autoSpeak, setAutoSpeak] = useState(true);
+  const [thinking, setThinking] = useState(false);
   const [speaking, setSpeaking] = useState(false);
-  const [online, setOnline] = useState(navigator.onLine);
+  const [muted, setMuted] = useState(false);
+  const mutedRef = useRef(false);
+  useEffect(() => { mutedRef.current = muted; }, [muted]);
+  useEffect(() => { liveOnRef.current = liveOn; }, [liveOn]);
 
-  // Online/offline indicator.
+  // Keep an active chat thread for this Live session.
   useEffect(() => {
-    const up = () => setOnline(true);
-    const down = () => setOnline(false);
-    window.addEventListener('online', up);
-    window.addEventListener('offline', down);
-    return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
-  }, []);
+    if (liveOn && !chatIdRef.current) {
+      const existing = aiChat.getActiveId();
+      chatIdRef.current = existing ?? aiChat.create('Live chat').id;
+    }
+  }, [liveOn]);
 
   // Cleanup on unmount.
-  useEffect(() => () => {
-    stopCamera();
-    stopSpeaking();
-    recognitionRef.current?.stop?.();
-  }, []);
+  useEffect(() => () => stopAll(), []);
 
-  // Auto-speak answer.
-  useEffect(() => {
-    if (autoSpeak && answer) speak(answer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [answer]);
-
-  const startCamera = async () => {
-    setCameraError(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false,
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => undefined);
-      }
-      setCameraOn(true);
-    } catch (e) {
-      const msg = (e as Error).message || 'Camera permission denied';
-      setCameraError(msg);
-      setCameraOn(false);
+  // --- Camera ---------------------------------------------------------------
+  const openCamera = async (face: 'environment' | 'user') => {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: face }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+    streamRef.current = stream;
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play().catch(() => undefined);
     }
   };
 
-  const stopCamera = () => {
+  const closeCamera = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
-    setCameraOn(false);
   };
 
-  const flipCamera = async () => {
-    const next = facing === 'environment' ? 'user' : 'environment';
-    setFacing(next);
-    if (cameraOn) {
-      stopCamera();
-      // Wait one frame then restart.
-      setTimeout(() => {
-        // restart with new facing — startCamera reads `facing` from state, so we
-        // bypass closure by inlining minimal start logic here.
-        navigator.mediaDevices
-          .getUserMedia({ video: { facingMode: { ideal: next } }, audio: false })
-          .then((stream) => {
-            streamRef.current = stream;
-            if (videoRef.current) {
-              videoRef.current.srcObject = stream;
-              videoRef.current.play().catch(() => undefined);
-            }
-            setCameraOn(true);
-          })
-          .catch((e) => setCameraError((e as Error).message));
-      }, 100);
-    }
-  };
-
-  // ---------- Voice ----------
+  // --- Voice (continuous) ---------------------------------------------------
   const startListening = () => {
     const SRClass: SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SRClass) {
-      alert('Voice input is not supported in this browser. Please type your question.');
+      setError('Voice input is not supported on this browser. Try Chrome on Android.');
       return;
     }
     const rec: SR = new SRClass();
@@ -120,27 +88,38 @@ const LiveCameraTool = () => {
     rec.interimResults = true;
     rec.lang = 'en-US';
     rec.onresult = (event: any) => {
-      let final = '';
       let live = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const t = event.results[i][0].transcript;
-        if (event.results[i].isFinal) final += t;
-        else live += t;
+        if (event.results[i].isFinal) {
+          const finalText = t.trim();
+          if (finalText) handleFinalQuery(finalText);
+        } else {
+          live += t;
+        }
       }
-      if (final) setQuestion((p) => (p ? p + ' ' : '') + final.trim());
       setInterim(live);
     };
-    rec.onend = () => { setRecording(false); setInterim(''); };
-    rec.onerror = () => { setRecording(false); setInterim(''); };
-    rec.start();
+    rec.onerror = () => { /* keep silent — onend will restart if needed */ };
+    rec.onend = () => {
+      // Auto-restart while live mode is on (so listening is continuous).
+      if (liveOnRef.current) { try { rec.start(); } catch { /* already started */ } }
+      setInterim('');
+    };
+    try { rec.start(); } catch { /* already running */ }
     recognitionRef.current = rec;
-    setRecording(true);
   };
-  const stopListening = () => { recognitionRef.current?.stop?.(); setRecording(false); };
 
-  // ---------- TTS ----------
+  const stopListening = () => {
+    const rec = recognitionRef.current;
+    recognitionRef.current = null;
+    try { rec?.stop?.(); } catch { /* noop */ }
+    setInterim('');
+  };
+
+  // --- TTS ------------------------------------------------------------------
   const speak = (text: string) => {
-    if (!('speechSynthesis' in window)) return;
+    if (mutedRef.current || !('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.rate = 1; u.pitch = 1;
@@ -151,7 +130,7 @@ const LiveCameraTool = () => {
   };
   const stopSpeaking = () => { window.speechSynthesis?.cancel(); setSpeaking(false); };
 
-  // ---------- Snapshot + Ask ----------
+  // --- Frame capture --------------------------------------------------------
   const captureFrame = (): string | null => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -161,172 +140,218 @@ const LiveCameraTool = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg', 0.85);
+    return canvas.toDataURL('image/jpeg', 0.8);
   };
 
-  const ask = async () => {
-    if (!cameraOn) { alert('Please start the camera first.'); return; }
-    if (!online) { alert('You are offline. Live answers need internet. Use the Offline tab to read past answers.'); return; }
+  // --- Ask AI (auto-triggered when the user finishes a sentence) -----------
+  const handleFinalQuery = async (question: string) => {
+    if (inflightRef.current) return; // ignore overlapping speech while thinking
+    inflightRef.current = true;
+    stopSpeaking();
+    const userBubble: Bubble = { id: `u-${Date.now()}`, role: 'user', text: question };
+    setBubbles((b) => [...b.slice(-6), userBubble]);
+    setThinking(true);
+
     const frame = captureFrame();
-    if (!frame) { alert('Could not capture an image from the camera.'); return; }
-    setSnapshot(frame);
-    setLoading(true); setAnswer(null); setSteps(undefined); stopSpeaking();
     try {
-      const q = question.trim() || 'Look at this image and explain or solve what you see. Show steps.';
       const { data, error } = await cloudSupabase.functions.invoke('ai-solve', {
-        body: { question: q, imageBase64: frame },
+        body: { question, imageBase64: frame ?? undefined },
       });
       if (error) throw error;
-      const ans = (data?.answer as string) || 'No answer';
-      setAnswer(ans);
-      setSteps(data?.steps);
-      aiCache.save({ question: q, answer: ans, steps: data?.steps, plot: data?.plot });
+      const answer = (data?.answer as string) || 'Sorry, I could not find an answer.';
+      const aBubble: Bubble = { id: `a-${Date.now()}`, role: 'assistant', text: answer };
+      setBubbles((b) => [...b.slice(-6), aBubble]);
+      // Persist to chat history.
+      const id = aiChat.appendQA({
+        chatId: chatIdRef.current,
+        question, answer,
+        steps: data?.steps, plot: data?.plot,
+      });
+      chatIdRef.current = id;
+      // Speak the answer aloud.
+      speak(answer);
     } catch (e) {
-      const msg = (e as Error).message || 'Could not reach the AI service.';
-      setAnswer(`Error: ${msg}`);
+      const msg = (e as Error).message || 'Could not reach AI.';
+      const aBubble: Bubble = { id: `a-${Date.now()}`, role: 'assistant', text: `Error: ${msg}` };
+      setBubbles((b) => [...b.slice(-6), aBubble]);
     } finally {
-      setLoading(false);
+      setThinking(false);
+      inflightRef.current = false;
     }
   };
 
-  const downloadSnapshot = () => {
-    if (!snapshot) return;
-    const a = document.createElement('a');
-    a.href = snapshot;
-    a.download = `ai-snapshot-${Date.now()}.jpg`;
-    document.body.appendChild(a); a.click(); a.remove();
+  // --- Master start/stop ----------------------------------------------------
+  const startLive = async () => {
+    setError(null);
+    try {
+      await openCamera(facing);
+      setLiveOn(true);
+      // Slight delay so the SR picks up after camera prompt is dismissed.
+      setTimeout(() => startListening(), 200);
+    } catch (e) {
+      setError((e as Error).message || 'Could not start camera/mic. Please grant permissions.');
+      setLiveOn(false);
+    }
+  };
+
+  const stopAll = () => {
+    setLiveOn(false);
+    liveOnRef.current = false;
+    stopListening();
+    stopSpeaking();
+    closeCamera();
+  };
+
+  const flipCamera = async () => {
+    const next = facing === 'environment' ? 'user' : 'environment';
+    setFacing(next);
+    if (liveOn) {
+      closeCamera();
+      try { await openCamera(next); } catch (e) { setError((e as Error).message); }
+    }
   };
 
   return (
-    <div className="p-4 space-y-3">
-      <div className="flex items-center justify-between text-sm">
-        <div className="flex items-center gap-2">
-          <Camera className="w-4 h-4 text-primary" />
-          <span className="font-semibold">Live camera + voice</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {!online && (
-            <span className="flex items-center gap-1 text-[10px] text-amber-600 bg-amber-500/10 px-2 py-1 rounded-full">
-              <WifiOff className="w-3 h-3" />Offline
-            </span>
-          )}
-          <button
-            onClick={() => setAutoSpeak((v) => !v)}
-            className={`p-1.5 rounded-lg ${autoSpeak ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
-            title="Auto-read answers"
-          >
-            {autoSpeak ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-          </button>
-        </div>
-      </div>
-
-      {/* Camera viewport */}
-      <div className="relative rounded-2xl overflow-hidden bg-black aspect-[4/3] border border-border">
-        <video ref={videoRef} playsInline muted className="w-full h-full object-cover" />
-        {!cameraOn && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80 gap-2">
-            <Camera className="w-10 h-10 opacity-60" />
-            <p className="text-xs text-center px-4">
-              {cameraError ? cameraError : 'Tap "Start camera" to begin.'}
-            </p>
-          </div>
-        )}
-        {cameraOn && (
-          <button
-            onClick={flipCamera}
-            className="absolute top-2 right-2 bg-black/50 backdrop-blur p-2 rounded-full text-white"
-            title="Flip camera"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-        )}
-        <canvas ref={canvasRef} className="hidden" />
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        {!cameraOn ? (
-          <button
-            onClick={startCamera}
-            className="col-span-2 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium"
-          >
-            <Camera className="w-4 h-4" /> Start camera
-          </button>
-        ) : (
-          <>
-            <button
-              onClick={stopCamera}
-              className="flex items-center justify-center gap-2 py-2 rounded-xl bg-muted text-sm font-medium"
-            >
-              <X className="w-4 h-4" /> Stop
-            </button>
-            <button
-              onClick={recording ? stopListening : startListening}
-              className={`flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium ${
-                recording ? 'bg-destructive text-destructive-foreground animate-pulse' : 'bg-muted'
-              }`}
-            >
-              {recording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-              {recording ? 'Stop voice' : 'Speak'}
-            </button>
-          </>
-        )}
-      </div>
-
-      <textarea
-        value={question + (interim ? ` ${interim}` : '')}
-        onChange={(e) => setQuestion(e.target.value)}
-        placeholder='Optional: type or speak — e.g. "Solve this equation", "What element is this?"'
-        className="w-full px-3 py-2 rounded-xl bg-muted text-sm outline-none focus:ring-1 focus:ring-primary min-h-[60px]"
-      />
-
-      <button
-        onClick={ask}
-        disabled={loading || !cameraOn}
-        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-primary to-cyan-600 text-primary-foreground text-sm font-medium disabled:opacity-50"
+    <div className="p-3">
+      {/* Stage — Gemini-Live style: dark with a soft aurora glow */}
+      <div
+        className="relative rounded-3xl overflow-hidden border border-white/10 aspect-[3/4] sm:aspect-[4/3]"
+        style={{
+          background:
+            'radial-gradient(120% 80% at 50% 100%, hsl(220 90% 45% / 0.45) 0%, hsl(265 90% 35% / 0.35) 35%, hsl(0 0% 4%) 70%)',
+        }}
       >
-        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-        {loading ? 'Looking…' : 'Capture & Ask AI'}
-      </button>
+        {/* Live camera */}
+        <video
+          ref={videoRef}
+          playsInline
+          muted
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+            liveOn ? 'opacity-90' : 'opacity-0'
+          }`}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-black/70 pointer-events-none" />
+        <canvas ref={canvasRef} className="hidden" />
 
-      {snapshot && (
-        <div className="space-y-2">
-          <p className="text-[10px] text-muted-foreground">Last capture</p>
-          <div className="relative">
-            <img src={snapshot} alt="Snapshot" className="w-full rounded-lg border border-border" />
-            <button
-              onClick={downloadSnapshot}
-              className="absolute top-2 right-2 bg-black/60 text-white p-1.5 rounded-full"
-              title="Save to gallery / downloads"
-            >
-              <Download className="w-3.5 h-3.5" />
-            </button>
+        {/* Top status bar */}
+        <div className="absolute top-3 left-3 right-3 flex items-center justify-between text-white/90 text-[11px]">
+          <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur px-2.5 py-1 rounded-full">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span className="font-medium">Live AI</span>
+            {liveOn && (
+              <span className="ml-1 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            )}
           </div>
-        </div>
-      )}
-
-      {answer && (
-        <div className="space-y-2">
-          <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 relative">
-            <p className="text-xs text-muted-foreground mb-1">Answer</p>
-            <p className="text-sm font-semibold pr-7">{answer}</p>
+          {liveOn && (
             <button
-              onClick={() => (speaking ? stopSpeaking() : speak(answer))}
-              className="absolute top-2 right-2 p-1.5 rounded-md bg-background/80"
-              title={speaking ? 'Stop' : 'Read aloud'}
+              onClick={flipCamera}
+              className="bg-black/40 backdrop-blur p-1.5 rounded-full"
+              title="Flip camera"
             >
-              {speaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+              <RefreshCw className="w-3.5 h-3.5 text-white" />
             </button>
-          </div>
-          {steps && steps.length > 0 && (
-            <div className="bg-muted rounded-xl p-3">
-              <p className="text-xs text-muted-foreground mb-1">Steps</p>
-              <ol className="list-decimal list-inside space-y-1 text-xs">
-                {steps.map((s, i) => <li key={i}>{s}</li>)}
-              </ol>
-            </div>
           )}
         </div>
-      )}
+
+        {/* Idle state */}
+        {!liveOn && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white text-center px-6">
+            <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur flex items-center justify-center">
+              <Camera className="w-7 h-7" />
+            </div>
+            <p className="text-sm font-semibold">Point, ask, listen</p>
+            <p className="text-[11px] text-white/70 max-w-[260px]">
+              Open the camera and just talk. I&apos;ll watch what you show me, answer
+              with my voice, and save the chat.
+            </p>
+            {error && (
+              <p className="text-[11px] text-red-300 bg-red-500/10 px-2 py-1 rounded-md">{error}</p>
+            )}
+          </div>
+        )}
+
+        {/* Chat bubbles overlay (last few) */}
+        {liveOn && bubbles.length > 0 && (
+          <div className="absolute inset-x-3 bottom-24 flex flex-col gap-1.5 max-h-[50%] overflow-hidden">
+            {bubbles.slice(-4).map((b) => (
+              <div
+                key={b.id}
+                className={`px-3 py-2 rounded-2xl text-[12px] leading-snug max-w-[85%] backdrop-blur ${
+                  b.role === 'user'
+                    ? 'self-end bg-white/15 text-white border border-white/15'
+                    : 'self-start bg-primary/85 text-primary-foreground'
+                }`}
+              >
+                {b.text}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Live transcript / status pill */}
+        {liveOn && (
+          <div className="absolute inset-x-3 bottom-16 flex justify-center pointer-events-none">
+            <div className="px-3 py-1.5 rounded-full bg-black/55 backdrop-blur text-white text-[11px] flex items-center gap-2 max-w-full">
+              {thinking ? (
+                <><Loader2 className="w-3 h-3 animate-spin" /> Thinking…</>
+              ) : speaking ? (
+                <><Volume2 className="w-3 h-3" /> Speaking…</>
+              ) : interim ? (
+                <span className="truncate max-w-[260px]">{interim}</span>
+              ) : (
+                <><Mic className="w-3 h-3 text-emerald-400" /> Listening…</>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Bottom control dock */}
+        <div className="absolute inset-x-0 bottom-3 flex items-center justify-center gap-3">
+          {!liveOn ? (
+            <button
+              onClick={startLive}
+              className="px-5 py-3 rounded-full bg-white text-black text-sm font-semibold shadow-lg flex items-center gap-2"
+            >
+              <Camera className="w-4 h-4" /> Start Live
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => setMuted((m) => !m)}
+                className={`w-11 h-11 rounded-full flex items-center justify-center backdrop-blur ${
+                  muted ? 'bg-white/15 text-white/70' : 'bg-white/20 text-white'
+                }`}
+                title={muted ? 'Unmute voice' : 'Mute voice'}
+              >
+                {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+              </button>
+              <button
+                onClick={stopAll}
+                className="w-14 h-14 rounded-full bg-red-500 text-white flex items-center justify-center shadow-xl active:scale-95 transition"
+                title="End"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <button
+                onClick={() => {
+                  if (recognitionRef.current) stopListening();
+                  else startListening();
+                }}
+                className={`w-11 h-11 rounded-full flex items-center justify-center backdrop-blur ${
+                  recognitionRef.current ? 'bg-emerald-500/90 text-white' : 'bg-white/15 text-white/70'
+                }`}
+                title={recognitionRef.current ? 'Pause mic' : 'Resume mic'}
+              >
+                {recognitionRef.current ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <p className="text-[10px] text-muted-foreground text-center mt-2">
+        Just talk — when you finish a sentence, I capture the camera and answer with my voice.
+      </p>
     </div>
   );
 };
