@@ -270,23 +270,7 @@ const LiveCameraTool = () => {
           </div>
         )}
 
-        {/* Chat bubbles overlay (last few) */}
-        {liveOn && bubbles.length > 0 && (
-          <div className="absolute inset-x-3 bottom-24 flex flex-col gap-1.5 max-h-[50%] overflow-hidden">
-            {bubbles.slice(-4).map((b) => (
-              <div
-                key={b.id}
-                className={`px-3 py-2 rounded-2xl text-[12px] leading-snug max-w-[85%] backdrop-blur ${
-                  b.role === 'user'
-                    ? 'self-end bg-white/15 text-white border border-white/15'
-                    : 'self-start bg-primary/85 text-primary-foreground'
-                }`}
-              >
-                {b.text}
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Chat bubbles overlay removed — answers stream into AI Chat tab. */}
 
         {/* Live transcript / status pill */}
         {liveOn && (
