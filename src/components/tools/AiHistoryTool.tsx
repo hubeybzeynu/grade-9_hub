@@ -1,13 +1,15 @@
 // Saved chats — each chat groups all messages on the same topic.
 // Tap a chat to read its messages; long-press / delete to remove it.
 import { useEffect, useState } from 'react';
-import { History, Trash2, Volume2, VolumeX, ChevronLeft, MessageSquarePlus, Pencil } from 'lucide-react';
+import { History, Trash2, Volume2, VolumeX, ChevronLeft, MessageSquarePlus, Pencil, BarChart3 } from 'lucide-react';
 import { aiChat, type ChatThread } from '@/lib/aiCache';
+import PlotRenderer from './PlotRenderer';
 
 const AiHistoryTool = () => {
   const [chats, setChats] = useState<ChatThread[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
+  const [graphOpenId, setGraphOpenId] = useState<string | null>(null);
 
   const refresh = () => setChats(aiChat.list());
   useEffect(() => { refresh(); }, []);
@@ -106,6 +108,22 @@ const AiHistoryTool = () => {
                     <ol className="list-decimal list-inside space-y-0.5 text-xs">
                       {m.steps.map((s, i) => <li key={i}>{s}</li>)}
                     </ol>
+                  </div>
+                )}
+                {m.role === 'assistant' && m.plot && (
+                  <div className="mt-2">
+                    <button
+                      onClick={() => setGraphOpenId(graphOpenId === m.id ? null : m.id)}
+                      className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20"
+                    >
+                      <BarChart3 className="w-3 h-3" />
+                      {graphOpenId === m.id ? 'Hide graph' : 'View graph'}
+                    </button>
+                    {graphOpenId === m.id && (
+                      <div className="mt-2 rounded-lg border border-border/60 bg-background/80 p-2">
+                        <PlotRenderer plot={m.plot} />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
