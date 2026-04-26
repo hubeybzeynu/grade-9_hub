@@ -22,9 +22,9 @@ const ToolsModal = ({ open, onClose, initialTab = 'calc' }: ToolsModalProps) => 
     () => [
       { id: 'calc' as Tab, label: 'Calc', icon: CalcIcon },
       { id: 'table' as Tab, label: 'Elements', icon: Atom },
-      { id: 'ai' as Tab, label: 'Ask AI', icon: Sparkles },
+      { id: 'ai' as Tab, label: 'AI Chat', icon: Sparkles },
       { id: 'live' as Tab, label: 'Live', icon: Camera },
-      { id: 'history' as Tab, label: 'Chats', icon: MessageSquare },
+      { id: 'history' as Tab, label: 'History', icon: MessageSquare },
     ],
     [],
   );
