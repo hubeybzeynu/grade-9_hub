@@ -72,12 +72,14 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: imageBase64 ? "google/gemini-2.5-flash" : "google/gemini-3-flash-preview",
+        // Upgrade: Gemini 2.5 Pro with high reasoning effort for max STEM accuracy.
+        model: "google/gemini-2.5-pro",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userContent },
         ],
         response_format: { type: "json_object" },
+        reasoning: { effort: "high" },
       }),
     });
 
