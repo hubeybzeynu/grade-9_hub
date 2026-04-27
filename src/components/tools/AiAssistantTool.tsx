@@ -274,7 +274,6 @@ const AiAssistantTool = () => {
         {messages.map((m) => {
           const isUser = m.role === 'user';
           const isSpeak = speakingId === m.id;
-          const showGraph = graphOpenId === m.id;
           const hasPlot = !!m.plot;
           return (
             <div key={m.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -308,21 +307,15 @@ const AiAssistantTool = () => {
                   </div>
                 )}
 
-                {/* Graph button + lazy view */}
+                {/* Open graph in modal */}
                 {!isUser && hasPlot && (
                   <div className="mt-2 ml-1">
                     <button
-                      onClick={() => setGraphOpenId(showGraph ? null : m.id)}
+                      onClick={() => setGraphMsg(m)}
                       className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20 active:scale-95"
                     >
-                      <BarChart3 className="w-3.5 h-3.5" />
-                      {showGraph ? 'Hide graph' : 'View graph'}
+                      <BarChart3 className="w-3.5 h-3.5" /> View graph
                     </button>
-                    {showGraph && (
-                      <div className="mt-2 rounded-xl border border-border/60 bg-card p-2 animate-fade-in">
-                        <PlotRenderer plot={m.plot} />
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
