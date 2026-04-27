@@ -525,12 +525,12 @@ const ExamResultPage = ({ type }: ExamResultPageProps) => {
               className="relative max-w-3xl w-full max-h-[90vh] overflow-y-auto"
             >
               <motion.button
+                whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => { setShowResult(false); setShowAnswer(false); setNavLocked(false); }}
-                aria-label="Close result"
-                className="absolute top-2 right-2 z-[60] p-2 rounded-xl bg-destructive/20 hover:bg-destructive/30 text-white transition-colors"
+                className="absolute -top-12 right-0 p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </motion.button>
 
               <div className="glass-card p-4 overflow-hidden">

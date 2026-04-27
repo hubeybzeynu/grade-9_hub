@@ -420,12 +420,12 @@ const ResultsPage = () => {
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-2xl font-bold gradient-text">All Results Gallery</h3>
                 <motion.button
+                  whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setShowGallery(false)}
-                  aria-label="Close gallery"
-                  className="p-2 rounded-xl bg-destructive/15 hover:bg-destructive/25 text-destructive transition-colors"
+                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-6 h-6" />
                 </motion.button>
               </div>
 

@@ -75,7 +75,7 @@ const ToolsFab = () => {
         whileTap={{ scale: 0.9 }}
         onClick={() => { if (!draggedRef.current) setOpen(true); }}
         style={{ left: pos.x, top: pos.y, width: FAB_SIZE, height: FAB_SIZE, touchAction: 'none' }}
-        className="fixed z-40 rounded-full bg-gradient-to-br from-primary to-cyan-600 flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing"
+        className="fixed z-[80] rounded-full bg-gradient-to-br from-primary to-cyan-600 flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing"
         aria-label="Open tools (drag to move)"
       >
         <FlaskConical className="w-5 h-5 text-primary-foreground pointer-events-none" />
