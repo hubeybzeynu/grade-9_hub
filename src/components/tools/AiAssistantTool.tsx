@@ -142,11 +142,14 @@ const AiAssistantTool = () => {
   };
   const stopRecording = () => { recognitionRef.current?.stop(); setRecording(false); };
 
-  // --- TTS ------------------------------------------------------------------
+  // --- TTS (male voice) -----------------------------------------------------
   const speak = (id: string, text: string) => {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
+    const v = pickMaleVoice();
+    if (v) u.voice = v;
+    u.rate = 1; u.pitch = 0.85;
     u.onstart = () => setSpeakingId(id);
     u.onend = () => setSpeakingId(null);
     u.onerror = () => setSpeakingId(null);
