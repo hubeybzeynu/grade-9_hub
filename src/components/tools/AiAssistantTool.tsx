@@ -61,13 +61,56 @@ const AiAssistantTool = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-scroll to bottom on new messages.
+  // Auto-scroll only when the user is already pinned to the bottom AND a NEW
+  // message arrived. Don't fight the user when they scroll up to read.
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    const el = scrollRef.current;
+    if (!el) return;
+    const grew = messages.length > lastCountRef.current;
+    lastCountRef.current = messages.length;
+    if (grew && stickToBottomRef.current) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    }
   }, [messages, loading]);
+
+  // Track whether the user is at the bottom; only then auto-scroll on new msgs.
+  const onScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    stickToBottomRef.current = distance < 80;
+  };
 
   // Stop TTS on unmount.
   useEffect(() => () => window.speechSynthesis?.cancel(), []);
+
+  // Pre-warm voices.
+  useEffect(() => {
+    const sy = window.speechSynthesis;
+    if (!sy) return;
+    sy.getVoices();
+    const onChange = () => sy.getVoices();
+    sy.addEventListener?.('voiceschanged', onChange);
+    return () => sy.removeEventListener?.('voiceschanged', onChange);
+  }, []);
+
+  const pickMaleVoice = (): SpeechSynthesisVoice | null => {
+    if (!('speechSynthesis' in window)) return null;
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices.length) return null;
+    const en = voices.filter((v) => v.lang?.toLowerCase().startsWith('en'));
+    const pool = en.length ? en : voices;
+    const malePatterns = [
+      /male/i, /\bdaniel\b/i, /\bdavid\b/i, /\bfred\b/i, /\balex\b/i,
+      /\bgoogle uk english male\b/i, /\bgoogle us english\b/i,
+      /\baaron\b/i, /\barthur\b/i, /\brishi\b/i,
+    ];
+    for (const re of malePatterns) {
+      const v = pool.find((v) => re.test(v.name));
+      if (v) return v;
+    }
+    return pool[0] ?? null;
+  };
 
   // --- Voice (single utterance → fills the draft) -------------------------
   const startRecording = () => {
