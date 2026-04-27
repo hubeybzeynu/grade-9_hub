@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { cloudSupabase } from '@/integrations/supabase/cloudClient';
 import { aiChat, type ChatMessage } from '@/lib/aiCache';
-import PlotRenderer from './PlotRenderer';
+import GraphViewerModal from './GraphViewerModal';
 
 type SR = any;
 
@@ -21,12 +21,14 @@ const AiAssistantTool = () => {
   const [recording, setRecording] = useState(false);
   const [interim, setInterim] = useState('');
   const [speakingId, setSpeakingId] = useState<string | null>(null);
-  const [graphOpenId, setGraphOpenId] = useState<string | null>(null);
+  const [graphMsg, setGraphMsg] = useState<ChatMessage | null>(null);
 
   const recognitionRef = useRef<SR | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<number | null>(null);
+  const lastCountRef = useRef(0);
+  const stickToBottomRef = useRef(true);
 
   // --- Load + keep in sync with shared chat store -------------------------
   const loadChat = (id: string | null) => {
@@ -59,13 +61,56 @@ const AiAssistantTool = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-scroll to bottom on new messages.
+  // Auto-scroll only when the user is already pinned to the bottom AND a NEW
+  // message arrived. Don't fight the user when they scroll up to read.
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    const el = scrollRef.current;
+    if (!el) return;
+    const grew = messages.length > lastCountRef.current;
+    lastCountRef.current = messages.length;
+    if (grew && stickToBottomRef.current) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    }
   }, [messages, loading]);
+
+  // Track whether the user is at the bottom; only then auto-scroll on new msgs.
+  const onScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    stickToBottomRef.current = distance < 80;
+  };
 
   // Stop TTS on unmount.
   useEffect(() => () => window.speechSynthesis?.cancel(), []);
+
+  // Pre-warm voices.
+  useEffect(() => {
+    const sy = window.speechSynthesis;
+    if (!sy) return;
+    sy.getVoices();
+    const onChange = () => sy.getVoices();
+    sy.addEventListener?.('voiceschanged', onChange);
+    return () => sy.removeEventListener?.('voiceschanged', onChange);
+  }, []);
+
+  const pickMaleVoice = (): SpeechSynthesisVoice | null => {
+    if (!('speechSynthesis' in window)) return null;
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices.length) return null;
+    const en = voices.filter((v) => v.lang?.toLowerCase().startsWith('en'));
+    const pool = en.length ? en : voices;
+    const malePatterns = [
+      /male/i, /\bdaniel\b/i, /\bdavid\b/i, /\bfred\b/i, /\balex\b/i,
+      /\bgoogle uk english male\b/i, /\bgoogle us english\b/i,
+      /\baaron\b/i, /\barthur\b/i, /\brishi\b/i,
+    ];
+    for (const re of malePatterns) {
+      const v = pool.find((v) => re.test(v.name));
+      if (v) return v;
+    }
+    return pool[0] ?? null;
+  };
 
   // --- Voice (single utterance → fills the draft) -------------------------
   const startRecording = () => {
@@ -97,11 +142,14 @@ const AiAssistantTool = () => {
   };
   const stopRecording = () => { recognitionRef.current?.stop(); setRecording(false); };
 
-  // --- TTS ------------------------------------------------------------------
+  // --- TTS (male voice) -----------------------------------------------------
   const speak = (id: string, text: string) => {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
+    const v = pickMaleVoice();
+    if (v) u.voice = v;
+    u.rate = 1; u.pitch = 0.85;
     u.onstart = () => setSpeakingId(id);
     u.onend = () => setSpeakingId(null);
     u.onerror = () => setSpeakingId(null);
@@ -197,7 +245,7 @@ const AiAssistantTool = () => {
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+      <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto px-3 py-3 space-y-3 overscroll-contain">
         {messages.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center text-center pt-6 pb-3 gap-3">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-cyan-500/20 flex items-center justify-center">
@@ -226,7 +274,6 @@ const AiAssistantTool = () => {
         {messages.map((m) => {
           const isUser = m.role === 'user';
           const isSpeak = speakingId === m.id;
-          const showGraph = graphOpenId === m.id;
           const hasPlot = !!m.plot;
           return (
             <div key={m.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -260,21 +307,15 @@ const AiAssistantTool = () => {
                   </div>
                 )}
 
-                {/* Graph button + lazy view */}
+                {/* Open graph in modal */}
                 {!isUser && hasPlot && (
                   <div className="mt-2 ml-1">
                     <button
-                      onClick={() => setGraphOpenId(showGraph ? null : m.id)}
+                      onClick={() => setGraphMsg(m)}
                       className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20 active:scale-95"
                     >
-                      <BarChart3 className="w-3.5 h-3.5" />
-                      {showGraph ? 'Hide graph' : 'View graph'}
+                      <BarChart3 className="w-3.5 h-3.5" /> View graph
                     </button>
-                    {showGraph && (
-                      <div className="mt-2 rounded-xl border border-border/60 bg-card p-2 animate-fade-in">
-                        <PlotRenderer plot={m.plot} />
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -359,6 +400,10 @@ const AiAssistantTool = () => {
           </button>
         </div>
       </div>
+
+      {graphMsg && (
+        <GraphViewerModal plot={graphMsg.plot} onClose={() => setGraphMsg(null)} />
+      )}
     </div>
   );
 };
