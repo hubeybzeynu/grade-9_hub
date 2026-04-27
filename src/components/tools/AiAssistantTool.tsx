@@ -245,7 +245,7 @@ const AiAssistantTool = () => {
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+      <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto px-3 py-3 space-y-3 overscroll-contain">
         {messages.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center text-center pt-6 pb-3 gap-3">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-cyan-500/20 flex items-center justify-center">
