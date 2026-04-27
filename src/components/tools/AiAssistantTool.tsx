@@ -9,6 +9,7 @@ import {
 import { cloudSupabase } from '@/integrations/supabase/cloudClient';
 import { aiChat, type ChatMessage } from '@/lib/aiCache';
 import PlotRenderer from './PlotRenderer';
+import GraphViewerModal from './GraphViewerModal';
 
 type SR = any;
 
@@ -400,6 +401,10 @@ const AiAssistantTool = () => {
           </button>
         </div>
       </div>
+
+      {graphMsg && (
+        <GraphViewerModal plot={graphMsg.plot} onClose={() => setGraphMsg(null)} />
+      )}
     </div>
   );
 };
