@@ -21,12 +21,14 @@ const AiAssistantTool = () => {
   const [recording, setRecording] = useState(false);
   const [interim, setInterim] = useState('');
   const [speakingId, setSpeakingId] = useState<string | null>(null);
-  const [graphOpenId, setGraphOpenId] = useState<string | null>(null);
+  const [graphMsg, setGraphMsg] = useState<ChatMessage | null>(null);
 
   const recognitionRef = useRef<SR | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<number | null>(null);
+  const lastCountRef = useRef(0);
+  const stickToBottomRef = useRef(true);
 
   // --- Load + keep in sync with shared chat store -------------------------
   const loadChat = (id: string | null) => {
