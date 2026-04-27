@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { cloudSupabase } from '@/integrations/supabase/cloudClient';
 import { aiChat, type ChatMessage } from '@/lib/aiCache';
-import PlotRenderer from './PlotRenderer';
 import GraphViewerModal from './GraphViewerModal';
 
 type SR = any;
