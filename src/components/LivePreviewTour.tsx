@@ -486,7 +486,7 @@ const LivePreviewTour = ({ onComplete }: LivePreviewTourProps) => {
       setAutoPlay(false);
       return;
     }
-    timer.current = window.setTimeout(() => setStepIdx((s) => s + 1), 5000);
+    timer.current = window.setTimeout(() => setStepIdx((s) => s + 1), 7000);
     return () => {
       if (timer.current) window.clearTimeout(timer.current);
     };
