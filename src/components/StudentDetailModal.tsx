@@ -347,10 +347,10 @@ const StudentDetailModal = ({ student, onClose }: Props) => {
         className="glass-card p-5 max-w-md w-full relative max-h-[90vh] overflow-y-auto"
       >
         <motion.button
-          whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={onClose}
-          className="absolute top-3 right-3 p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors z-10"
+          aria-label="Close"
+          className="absolute top-3 right-3 z-[60] p-2 rounded-xl bg-destructive/15 hover:bg-destructive/25 text-destructive transition-colors"
         >
           <X className="w-5 h-5" />
         </motion.button>

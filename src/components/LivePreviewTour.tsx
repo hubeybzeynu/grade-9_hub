@@ -51,77 +51,222 @@ interface TourStep {
 }
 
 const STEPS: TourStep[] = [
+  // -- Home + tools intro -------------------------------------------------
   {
-    title: 'Home',
-    caption: 'You start here. Tap any subject card to open it.',
+    title: 'Welcome to Grade 9 Portal',
+    caption: 'Your home screen with every section as a card. The atom button (top-right, draggable) opens Calculator, Elements, AI Chat, Live and History.',
+    view: 'home',
+    tap: { x: 360, y: 30 },
+  },
+
+  // -- Textbooks → English → Content finder -------------------------------
+  {
+    title: 'Open Textbooks',
+    caption: 'Tap the Textbooks card to see every Grade 9 subject. They all open offline.',
     view: 'home',
     tap: { x: 110, y: 360 },
   },
   {
-    title: 'Floating Tools button',
-    caption: 'The atom button at the top-right opens Calculator, Elements and Ask AI on every page.',
-    view: 'home',
-    tap: { x: 360, y: 30 },
-  },
-  {
-    title: 'Textbooks',
-    caption: 'All Grade 9 textbooks open offline. Pick a subject, search an activity, jump straight to that page.',
+    title: 'Pick English',
+    caption: 'Choose the English textbook from the subject list.',
     view: 'textbooks',
     tap: { x: 195, y: 220 },
   },
   {
-    title: 'Students',
-    caption: 'Browse all classmates with photos. Search by name, tap a card for the full profile.',
+    title: 'Content Finder',
+    caption: 'A bottom-sheet appears: search any exercise, activity or review and jump straight to that page. Close it to go back.',
+    view: 'textbooks',
+    tap: { x: 360, y: 600 },
+  },
+
+  // -- Students: filters + a profile + ID card ---------------------------
+  {
+    title: 'Students directory',
+    caption: 'Browse all your classmates with photos and search by name.',
     view: 'students',
-    tap: { x: 195, y: 200 },
+    tap: { x: 110, y: 100 },
   },
   {
-    title: 'Mid Exam',
-    caption: 'Mid-term marks updated by teachers. Open from "More → Mid Exam".',
+    title: 'Filter by Male / Female / All',
+    caption: 'Use the gender chips to show only Male, only Female, or All students. Tap "All" again to reset.',
+    view: 'students',
+    tap: { x: 110, y: 215 },
+  },
+  {
+    title: 'Filter sections 9A · 9B · 9C',
+    caption: 'Then filter by section (9A, 9B, 9C) and tap "All" to return to the full list.',
+    view: 'students',
+    tap: { x: 220, y: 255 },
+  },
+  {
+    title: 'Open a profile (e.g. ID 5 — Hubeyb Zeynu)',
+    caption: 'Tap any student card. Tip: ID 5 is Hubeyb Zeynu — opens the full profile with photo, section and ID card.',
+    view: 'students',
+    tap: { x: 195, y: 380 },
+  },
+  {
+    title: 'ID card · enter code 12345',
+    caption: 'In the profile, open ID Card and type the code (e.g. 12345) to reveal the protected info. Close with the red ✕ on the right.',
+    view: 'students',
+    tap: { x: 195, y: 470 },
+  },
+
+  // -- Mid Exam: id 5, password 1111, then Show Answer -------------------
+  {
+    title: 'Mid Exam · ID 5 / pwd 1111',
+    caption: 'Type your student ID (5) and password (1111). Your result image opens in full-screen.',
     view: 'mid',
     tap: { x: 195, y: 280 },
   },
   {
+    title: 'Show Answer',
+    caption: 'Wait a moment, then tap "Show Answer" to flip from your result sheet to the official answer key. Close with the ✕ on the right.',
+    view: 'mid',
+    tap: { x: 280, y: 560 },
+  },
+
+  // -- Final Exam (similar UI) -------------------------------------------
+  {
     title: 'Final Exam',
-    caption: 'Password-protected final results. Same path: More → Final Exam.',
+    caption: 'Final results work the same way as Mid — same ID + password flow, same Show Answer toggle, same ✕ to close.',
     view: 'final',
     tap: { x: 195, y: 280 },
   },
+
+  // -- Report Card: id 5, verify, password 12345 -------------------------
   {
-    title: 'Report Card',
-    caption: 'Full academic report — subjects, averages, conduct, attendance, promotion.',
+    title: 'Report Card · ID 5',
+    caption: 'Type ID 5 and tap Verify — your name + photo appear so you know it is yours.',
     view: 'report',
-    tap: { x: 195, y: 300 },
+    tap: { x: 195, y: 250 },
   },
   {
-    title: 'Ministry Results',
-    caption: 'Enter your student ID for the official Ministry exam result.',
+    title: 'Report Card · password 12345',
+    caption: 'Type the password 12345, open the report and scroll through subjects, averages, conduct, attendance and promotion. Close with the ✕ on the right.',
+    view: 'report',
+    tap: { x: 195, y: 360 },
+  },
+
+  // -- Ministry results --------------------------------------------------
+  {
+    title: 'Ministry results',
+    caption: 'Enter your student ID for the official Ministry exam result image. Close with the ✕ on the right.',
     view: 'results',
     tap: { x: 195, y: 260 },
   },
+
+  // -- Calculator suite --------------------------------------------------
+  {
+    title: 'Calculator · sin 30',
+    caption: 'Open Tools → Calculator. Try "sin 30" — it shows 0.5 instantly. Use parentheses, π, √ and exponents.',
+    view: 'tools-calc',
+    tap: { x: 195, y: 320 },
+  },
+  {
+    title: 'Quadratic solver',
+    caption: 'Switch to Quadratic — enter a, b, c and get the roots, vertex and a graph.',
+    view: 'tools-calc',
+    tap: { x: 110, y: 110 },
+  },
+  {
+    title: 'Trigonometry · 40°',
+    caption: 'Trigonometry tab: enter an angle (e.g. 40°) and get sin, cos, tan with a right-triangle diagram.',
+    view: 'tools-calc',
+    tap: { x: 175, y: 110 },
+  },
+  {
+    title: 'Statistics',
+    caption: 'Statistics tab: paste numbers and instantly get mean, median, mode, range, variance and standard deviation.',
+    view: 'tools-calc',
+    tap: { x: 235, y: 110 },
+  },
+  {
+    title: 'Unit converter',
+    caption: 'Unit tab: convert length, mass, temperature, time, area, volume and speed.',
+    view: 'tools-calc',
+    tap: { x: 290, y: 110 },
+  },
+  {
+    title: 'Chemistry · C6H12O6',
+    caption: 'Chemistry tab: type a formula like C6H12O6 — molar mass, element breakdown and percent composition appear.',
+    view: 'tools-calc',
+    tap: { x: 340, y: 110 },
+  },
+
+  // -- Periodic Table → Uranium → Ask AI --------------------------------
+  {
+    title: 'Periodic Table · Uranium',
+    caption: 'Open Elements. Tap Uranium (U, 92) to see its full data card: shells, configuration, Zeff, group, period.',
+    view: 'tools-elements',
+    tap: { x: 250, y: 480 },
+  },
+  {
+    title: 'Ask AI · electron configuration',
+    caption: 'On the element details, tap "Ask AI" and ask "electron configuration" — the AI explains it step-by-step.',
+    view: 'tools-elements',
+    tap: { x: 195, y: 600 },
+  },
+
+  // -- AI Chat -----------------------------------------------------------
+  {
+    title: 'AI Chat · type or speak',
+    caption: 'Type a question, attach an image, or tap the mic to speak. Replies are read aloud in a male voice.',
+    view: 'tools-ai',
+    tap: { x: 195, y: 640 },
+  },
+  {
+    title: 'AI Chat · voice input',
+    caption: 'Tap the mic icon (right of the input) and ask out loud. Your words become the message and the AI answers.',
+    view: 'tools-ai',
+    tap: { x: 340, y: 640 },
+  },
+
+  // -- Live Chat ---------------------------------------------------------
+  {
+    title: 'Live · camera + voice',
+    caption: 'Live tab opens the camera. Just talk — I capture the frame, send it, and reply with my voice. You can also tap the shutter to snap manually or upload an image.',
+    view: 'tools-ai',
+    tap: { x: 195, y: 35 },
+  },
+
+  // -- History -----------------------------------------------------------
+  {
+    title: 'History · saved chats',
+    caption: 'Every AI Chat and Live conversation is saved here as a topic thread. Tap any thread to replay it, with TTS and graphs.',
+    view: 'tools-ai',
+    tap: { x: 320, y: 35 },
+  },
+
+  // -- Info menu ---------------------------------------------------------
   {
     title: 'Info menu (top-LEFT)',
-    caption: 'About, feedback, rate, contact. The (i) icon is at the top-left so the Tools button never covers it.',
+    caption: 'The (i) icon at the top-left opens About, Feedback, Rate this app, and Contact. The Tools button is on the right so they never overlap.',
     view: 'info',
     tap: { x: 30, y: 30 },
   },
   {
-    title: 'Calculator',
-    caption: 'Five calculators in one: Scientific · Quadratic · Graph · Trigonometry · Chemistry.',
-    view: 'tools-calc',
-    tap: { x: 195, y: 200 },
+    title: 'About this app',
+    caption: 'About: a short description, your version, and credits. Close with the ✕ on the right.',
+    view: 'info',
+    tap: { x: 195, y: 220 },
   },
   {
-    title: 'Periodic Table',
-    caption: 'All 118 elements. Tap any element to see configuration, shells (2 8 18 …), Zeff and more.',
-    view: 'tools-elements',
-    tap: { x: 195, y: 240 },
+    title: 'Feedback',
+    caption: 'Send feedback directly to the team — it is stored in the cloud and reviewed.',
+    view: 'info',
+    tap: { x: 195, y: 290 },
   },
   {
-    title: 'Ask AI',
-    caption: 'Math, trig, chemistry. The AI returns the answer, the steps and a diagram when relevant.',
-    view: 'tools-ai',
-    tap: { x: 195, y: 320 },
+    title: 'Rate this app',
+    caption: 'Leave a star rating + comment. Thank you 💜',
+    view: 'info',
+    tap: { x: 195, y: 360 },
+  },
+  {
+    title: 'Contact',
+    caption: 'Phone, email and social links so you can reach us. That is the whole tour — tap "Get Started" to enter the app.',
+    view: 'info',
+    tap: { x: 195, y: 430 },
   },
 ];
 
@@ -341,7 +486,7 @@ const LivePreviewTour = ({ onComplete }: LivePreviewTourProps) => {
       setAutoPlay(false);
       return;
     }
-    timer.current = window.setTimeout(() => setStepIdx((s) => s + 1), 5000);
+    timer.current = window.setTimeout(() => setStepIdx((s) => s + 1), 7000);
     return () => {
       if (timer.current) window.clearTimeout(timer.current);
     };
