@@ -2,3 +2,9 @@ project_id = "zkkskylhyrwpxfosayrn"
 
 [functions.ai-solve]
 verify_jwt = false
+
+[functions.telegram-info]
+verify_jwt = false
+
+[functions.telegram-notify]
+verify_jwt = false
