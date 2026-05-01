@@ -11,6 +11,7 @@ import ExamResultPage from '@/components/ExamResultPage';
 import ReportCardPage from '@/components/ReportCardPage';
 import InfoPage from '@/components/InfoPage';
 import ToolsFab from '@/components/ToolsFab';
+import TelegramBotPrompt from '@/components/TelegramBotPrompt';
 
 // NOTE: This build talks to external Supabase projects directly and does not
 // require a Lovable Cloud account, so we skip the LoginGate entirely. Anyone
@@ -100,6 +101,7 @@ const Index = () => {
     <div className="min-h-screen">
       <Navbar currentPage={currentPage} onNavigate={navigateTo} />
       <ToolsFab />
+      <TelegramBotPrompt />
       <div key={currentPage}>{renderPage()}</div>
     </div>
   );

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Star, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { notifyTelegram } from '@/lib/telegramBot';
 import type { User } from '@supabase/supabase-js';
 
 interface RatingFormProps {
@@ -44,6 +45,15 @@ const RatingForm = ({ user }: RatingFormProps) => {
       setSending(false);
       return;
     }
+
+    // Forward to admin Telegram bot (best-effort; don't block UX on failure).
+    notifyTelegram({
+      kind: 'rating',
+      name: userName,
+      email: user?.email ?? undefined,
+      rating,
+      message: message.trim() || undefined,
+    });
 
     setSent(true);
     setRating(0);

@@ -1,0 +1,53 @@
+// Helper: send notifications to the admin Telegram bot via edge function.
+// Uses Lovable Cloud client (separate from external students DB).
+import { cloudSupabase } from '@/integrations/supabase/cloudClient';
+
+export type TelegramKind = 'rating' | 'feedback' | 'support' | 'visitor';
+
+export interface TelegramPayload {
+  kind: TelegramKind;
+  name?: string;
+  email?: string;
+  message?: string;
+  rating?: number;
+}
+
+export async function notifyTelegram(payload: TelegramPayload): Promise<boolean> {
+  try {
+    const { error } = await cloudSupabase.functions.invoke('telegram-notify', {
+      body: payload,
+    });
+    if (error) {
+      console.warn('telegram-notify error:', error);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.warn('telegram-notify exception:', e);
+    return false;
+  }
+}
+
+// Cached bot username (fetched once per session).
+let botUsernameCache: string | null = null;
+export async function getBotUsername(): Promise<string> {
+  if (botUsernameCache) return botUsernameCache;
+  try {
+    const { data } = await cloudSupabase.functions.invoke('telegram-info', {});
+    if (data && typeof data === 'object' && 'username' in data) {
+      const u = String((data as { username: string }).username || '').replace(/^@/, '');
+      if (u) {
+        botUsernameCache = u;
+        return u;
+      }
+    }
+  } catch (e) {
+    console.warn('telegram-info failed:', e);
+  }
+  // Fallback to known username (set as a secret too).
+  return 'responsstshubbot';
+}
+
+export function botDeepLink(username: string): string {
+  return `https://t.me/${username}`;
+}
