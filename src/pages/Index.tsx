@@ -101,6 +101,7 @@ const Index = () => {
     <div className="min-h-screen">
       <Navbar currentPage={currentPage} onNavigate={navigateTo} />
       <ToolsFab />
+      <TelegramBotPrompt />
       <div key={currentPage}>{renderPage()}</div>
     </div>
   );
