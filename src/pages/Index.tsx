@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import SplashScreen from '@/components/SplashScreen';
-import LivePreviewTour from '@/components/LivePreviewTour';
+import WelcomeOnboarding from '@/components/WelcomeOnboarding';
+import LoginGate from '@/components/LoginGate';
 import Navbar from '@/components/Navbar';
 import HomePage from '@/components/HomePage';
 import TextbooksPage from '@/components/TextbooksPage';
@@ -12,6 +13,8 @@ import ReportCardPage from '@/components/ReportCardPage';
 import InfoPage from '@/components/InfoPage';
 import ToolsFab from '@/components/ToolsFab';
 import TelegramBotPrompt from '@/components/TelegramBotPrompt';
+import { supabase } from '@/integrations/supabase/client';
+import type { Session } from '@supabase/supabase-js';
 
 // NOTE: This build talks to external Supabase projects directly and does not
 // require a Lovable Cloud account, so we skip the LoginGate entirely. Anyone
