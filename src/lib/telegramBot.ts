@@ -48,6 +48,26 @@ export async function getBotUsername(): Promise<string> {
   return 'responsstshubbot';
 }
 
-export function botDeepLink(username: string): string {
-  return `https://t.me/${username}`;
+export function botDeepLink(username: string, startPayload?: string): string {
+  // Strip any accidental "https://t.me/" prefix or leading "@".
+  const clean = String(username || '')
+    .replace(/^https?:\/\/t\.me\//i, '')
+    .replace(/^@/, '')
+    .trim() || 'responsstshubbot';
+  const base = `https://t.me/${clean}`;
+  return startPayload ? `${base}?start=${encodeURIComponent(startPayload)}` : base;
+}
+
+/**
+ * Stable per-device id used as the Telegram `start` payload so the
+ * bot can link a Telegram chat back to this website visitor.
+ */
+export function getDeviceLinkId(): string {
+  const KEY = 'tg_device_link_id_v1';
+  let id = localStorage.getItem(KEY);
+  if (!id) {
+    id = 'web_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    localStorage.setItem(KEY, id);
+  }
+  return id;
 }

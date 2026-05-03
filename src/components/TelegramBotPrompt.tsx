@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, X, ExternalLink } from 'lucide-react';
-import { getBotUsername, botDeepLink, notifyTelegram } from '@/lib/telegramBot';
+import { getBotUsername, botDeepLink, notifyTelegram, getDeviceLinkId } from '@/lib/telegramBot';
 
 const SHOWN_KEY = 'tg_bot_prompt_shown_v1';
 
@@ -36,9 +36,14 @@ const TelegramBotPrompt = () => {
   };
 
   const openBot = () => {
-    const url = botDeepLink(username);
-    // Open in a new tab. Some browsers will then surface the
-    // "open Telegram desktop?" OS prompt — that is platform behavior.
+    const linkId = getDeviceLinkId();
+    const url = botDeepLink(username, linkId);
+    // Tell the admin which device started the link flow so the bot
+    // can match the next /start payload back to this visitor.
+    notifyTelegram({
+      kind: 'visitor',
+      name: `Link requested — payload: ${linkId}`,
+    });
     window.open(url, '_blank', 'noopener,noreferrer');
     close();
   };
