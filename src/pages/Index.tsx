@@ -16,9 +16,6 @@ import TelegramBotPrompt from '@/components/TelegramBotPrompt';
 import { supabase } from '@/integrations/supabase/client';
 import type { Session } from '@supabase/supabase-js';
 
-// NOTE: This build talks to external Supabase projects directly and does not
-// require a Lovable Cloud account, so we skip the LoginGate entirely. Anyone
-// who installs the app gets straight in after the splash + onboarding.
 const Index = () => {
   const [splashDone, setSplashDone] = useState(
     () => sessionStorage.getItem('splash_shown') === 'true',
@@ -26,15 +23,25 @@ const Index = () => {
   const [onboarded, setOnboarded] = useState(
     () => localStorage.getItem('portal_onboarded') === 'true',
   );
+  const [session, setSession] = useState<Session | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const [currentPage, setCurrentPage] = useState('home');
   const [pageHistory, setPageHistory] = useState<string[]>(['home']);
+
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setAuthReady(true);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   const navigateTo = useCallback((page: string) => {
     setPageHistory((prev) => [...prev, page]);
     setCurrentPage(page);
   }, []);
 
-  // Android back button handling
   useEffect(() => {
     const handlePopState = (e: PopStateEvent) => {
       e.preventDefault();
@@ -74,9 +81,13 @@ const Index = () => {
   if (!onboarded) {
     return (
       <AnimatePresence>
-        <LivePreviewTour onComplete={handleOnboardComplete} />
+        <WelcomeOnboarding onComplete={handleOnboardComplete} />
       </AnimatePresence>
     );
+  }
+
+  if (authReady && !session) {
+    return <LoginGate onLogin={() => { /* session arrives via listener */ }} />;
   }
 
   const renderPage = () => {
